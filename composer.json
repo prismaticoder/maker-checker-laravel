@@ -1,0 +1,18 @@
+{
+    "name": "prismaticode/maker-checker-laravel",
+    "description": "A package for simplifying the addition of a maker-checker feature to your Laravel application",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Prismaticode\\MakerCheckerLaravel\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Jesutomiwa Salam",
+            "email": "pjjsalam1999@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {}
+}
