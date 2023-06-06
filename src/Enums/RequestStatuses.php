@@ -10,4 +10,9 @@ abstract class RequestStatuses
     public const REJECTED = 'rejected';
     public const EXPIRED = 'expired';
     public const FAILED = 'failed';
+
+    public static function getFinalizedStatuses(): array
+    {
+        return [static::APPROVED, static::REJECTED, static::EXPIRED, static::FAILED];
+    }
 }
