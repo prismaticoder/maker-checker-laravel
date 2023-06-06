@@ -15,7 +15,7 @@ return [
 
     /*
      * This configuration is for the purpose of limiting the actions of making/checking requests to certain models.
-     * If it is left empty, any model will be able to request to initiate/approve/decline a request.
+     * If it is left empty, any model will be able to initiate/approve/decline a request.
      */
     'whitelisted_models' => [
         'maker' => [], //e.g [User::class]
