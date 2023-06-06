@@ -1,0 +1,51 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateMakerCheckerRequestsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('maker_checker_requests', function (Blueprint $table) {
+            $table->id();
+            $table->uuid('code');
+            $table->text('description');
+            $table->string('request_type');
+            $table->string('status');
+
+            $table->nullableMorphs('subject', 'subject');
+            $table->string('request_action')->nullable();
+
+            $table->morphs('maker', 'maker');
+            $table->timestamp('made_at');
+
+            $table->json('payload')->nullable();
+            $table->json('metadata')->nullable();
+
+            $table->nullableMorphs('checker');
+            $table->timestamp('checked_at')->nullable();
+
+            $table->text('remarks')->nullable();
+            $table->text('exception')->nullable();
+
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::dropIfExists('maker_checker_requests');
+    }
+};
