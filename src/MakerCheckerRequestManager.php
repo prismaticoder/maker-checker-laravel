@@ -8,7 +8,6 @@ use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Laravel\SerializableClosure\SerializableClosure;
 use Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface;
 use Prismaticode\MakerChecker\Enums\Hooks;
@@ -16,23 +15,9 @@ use Prismaticode\MakerChecker\Enums\RequestStatuses;
 use Prismaticode\MakerChecker\Enums\RequestTypes;
 use Prismaticode\MakerChecker\Exceptions\InvalidRequestTypePassed;
 use Prismaticode\MakerChecker\Exceptions\ModelCannotCheckRequests;
-use Prismaticode\MakerChecker\Exceptions\ModelCannotMakeRequests;
-use Prismaticode\MakerChecker\Models\MakerCheckerRequest;
 
-class MakerChecker
+class MakerCheckerRequestManager
 {
-    private Model $requestor;
-
-    private string $requestType;
-
-    private string $subjectClass;
-
-    private string $description;
-
-    private $subjectId;
-
-    private array $payload = [];
-
     private array $hooks = [];
 
     private Application $app;
@@ -46,89 +31,13 @@ class MakerChecker
     }
 
     /**
-     * Commence the process of initiating a new request.
+     * Begin initiating a new request.
      *
-     * @param \Illuminate\Database\Eloquent\Model $requestor
-     *
-     * @return self
+     * @return \Prismaticode\MakerChecker\RequestBuilder
      */
-    public function newRequest(Model $requestor): self
+    public function request(): RequestBuilder
     {
-        $this->assertModelCanMakeRequests($requestor);
-
-        $this->requestor = $requestor;
-
-        return $this;
-    }
-
-    public function madeBy(Model $maker): self
-    {
-        $this->assertModelCanMakeRequests($maker);
-
-        $this->requestor = $maker;
-
-        return $this;
-    }
-
-    /**
-     * Commence initiation of a create request.
-     *
-     * @param string $model
-     * @param array $payload
-     *
-     * @return self
-     */
-    public function toCreate(string $model, array $payload = []): self
-    {
-        $this->assertRequestTypeIsNotSet();
-
-        if (! is_subclass_of($model, Model::class)) {
-            throw new Exception('Unrecognized model: '.$model);
-        }
-
-        $this->requestType = RequestTypes::CREATE;
-        $this->subjectClass = $model;
-        $this->payload = $payload;
-
-        return $this;
-    }
-
-    /**
-     * Commence initiation of an update request.
-     *
-     * @param \Illuminate\Database\Eloquent\Model $modelToUpdate
-     * @param array $requestedChanges
-     *
-     * @return self
-     */
-    public function toUpdate(Model $modelToUpdate, array $requestedChanges): self
-    {
-        $this->assertRequestTypeIsNotSet();
-
-        $this->requestType = RequestTypes::UPDATE;
-        $this->subjectClass = $modelToUpdate->getMorphClass();
-        $this->subjectId = $modelToUpdate->getKey();
-        $this->payload = $requestedChanges;
-
-        return $this;
-    }
-
-    /**
-     * Commence initiation of a delete request.
-     *
-     * @param \Illuminate\Database\Eloquent\Model $modelToDelete
-     *
-     * @return self
-     */
-    public function toDelete(Model $modelToDelete): self
-    {
-        $this->assertRequestTypeIsNotSet();
-
-        $this->requestType = RequestTypes::DELETE;
-        $this->subjectClass = $modelToDelete->getMorphClass();
-        $this->subjectId = $modelToDelete->getKey();
-
-        return $this;
+        return new RequestBuilder($this->app);
     }
 
     /**
@@ -199,28 +108,6 @@ class MakerChecker
         $this->setHook(Hooks::ON_FAILURE, $callback);
 
         return $this;
-    }
-
-    /**
-     * Persist the request into the data store.
-     *
-     * @return \Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface
-     */
-    public function save(): MakerCheckerRequestInterface
-    {
-        return MakerCheckerRequest::create([
-            'request_type' => $this->requestType,
-            'status' => RequestStatuses::PENDING,
-            'payload' => $this->payload,
-            'subject_type' => $this->subjectClass,
-            'subject_id' => $this->subjectId,
-            'metadata' => ['hooks' => $this->hooks],
-            'maker_type' => $this->requestor->getMorphClass(),
-            'maker_id' => $this->requestor->getKey(),
-            'made_at' => Carbon::now(),
-            'description' => $this->description,
-            'code' => (string) Str::uuid(),
-        ]);
     }
 
     /**
@@ -301,15 +188,6 @@ class MakerChecker
         }
     }
 
-    private function setHook(string $hookName, Closure $callback): void
-    {
-        if (! in_array($hookName, Hooks::getAll())) {
-            throw new Exception('Invalid hook passed.');
-        }
-
-        $this->hooks[$hookName] = serialize(new SerializableClosure($callback));
-    }
-
     private function executeCallbackHook(MakerCheckerRequestInterface $request, string $hook): void
     {
         $callback = $this->getHook($request, $hook);
@@ -317,6 +195,15 @@ class MakerChecker
         if ($callback) {
             $callback($request);
         }
+    }
+
+    private function setHook(string $hookName, Closure $callback): void
+    {
+        if (! in_array($hookName, Hooks::getAll())) {
+            throw new Exception('Invalid hook passed.');
+        }
+
+        $this->hooks[$hookName] = serialize(new SerializableClosure($callback));
     }
 
     private function getHook(MakerCheckerRequestInterface $request, string $hookName): ?Closure
@@ -340,31 +227,6 @@ class MakerChecker
             $request->subject->delete();
         } else {
             throw InvalidRequestTypePassed::create($request->type);
-        }
-    }
-
-    private function assertRequestTypeIsNotSet(): void
-    {
-        if (isset($this->requestType)) {
-            throw new Exception('Cannot modify request type, a request type has already been provided.');
-        }
-    }
-
-    private function assertModelCanMakeRequests(Model $requestor): void
-    {
-        $requestingModel = get_class($requestor);
-        $allowedRequestors = data_get($this->configData, 'whitelisted_models.maker');
-
-        if (is_string($allowedRequestors)) {
-            $allowedRequestors = [$allowedRequestors];
-        }
-
-        if (! is_array($allowedRequestors)) {
-            $allowedRequestors = [];
-        }
-
-        if(! empty($allowedRequestors) && ! in_array($requestingModel, $allowedRequestors)) {
-            throw ModelCannotMakeRequests::create($requestingModel);
         }
     }
 
