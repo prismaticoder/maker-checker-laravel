@@ -327,7 +327,7 @@ class MakerChecker
         } elseif ($request->isOfType(RequestTypes::DELETE)) {
             $request->subject->delete();
         } else {
-            throw new Exception('Request does not have a valid request type');
+            throw InvalidRequestTypePassed::create($request->type);
         }
     }
 
@@ -371,13 +371,6 @@ class MakerChecker
 
         if(! empty($allowedCheckers) && ! in_array($checkerModel, $allowedCheckers)) {
             throw ModelCannotCheckRequests::create($checkerModel);
-        }
-    }
-
-    private function validateRequestType(string $requestType): void
-    {
-        if (! in_array($requestType, RequestTypes::getAll())) {
-            throw InvalidRequestTypePassed::create($requestType);
         }
     }
 }
