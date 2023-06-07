@@ -7,6 +7,7 @@ use Closure;
 use Exception;
 use Illuminate\Config\Repository;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\SerializableClosure\SerializableClosure;
 use Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface;
@@ -142,8 +143,12 @@ class MakerChecker
         ]);
     }
 
-    public function approve(MakerCheckerRequestInterface $request, Model $approver): MakerCheckerRequestInterface
+    public function approve(MakerCheckerRequestInterface $request, Model $approver, ?string $remarks): MakerCheckerRequestInterface
     {
+        if (! $request instanceof Model) {
+            throw new Exception('Request class must extend the base Eloquent model class.');
+        }
+
         $this->assertModelCanCheckRequests($approver);
 
         if (! $request->isOfStatus(RequestStatuses::PENDING)) {
@@ -163,9 +168,47 @@ class MakerChecker
         $request->update(['status' => RequestStatuses::PROCESSING]);
 
         try {
-            //code...
-        } catch (\Throwable $th) {
-            //throw $th;
+            $this->executeCallbackHook($request, Hooks::PRE_APPROVAL);
+
+            //TODO: put the below in a job instead. This will be useful when it comes to executing generic actions.
+            DB::beginTransaction();
+
+            $this->fulfillRequest($request);
+
+            $request->update([
+                'status' => RequestStatuses::APPROVED,
+                'checker_type' => $approver->getMorphClass(),
+                'checker_id' => $approver->getKey(),
+                'checked_at' => Carbon::now(),
+                'remarks' => $remarks,
+            ]);
+
+            DB::commit();
+
+            $this->executeCallbackHook($request, Hooks::POST_APPROVAL); //TODO: do this inside a job instead.
+
+            return $request;
+
+            //TODO: Call the general event for post approval
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            $request->update([
+                'status' => RequestStatuses::FAILED,
+                'exception' => $e->getTraceAsString(),
+                'checker_type' => $approver->getMorphClass(),
+                'checker_id' => $approver->getKey(),
+                'checked_at' => Carbon::now(),
+                'remarks' => $remarks,
+            ]);
+
+            $onFailureCallBack = $this->getHook($request, Hooks::ON_FAILURE);
+
+            if ($onFailureCallBack) {
+                $onFailureCallBack($e);
+            }
+
+            //TODO: Call the general event for failure
         }
     }
 
@@ -176,6 +219,39 @@ class MakerChecker
         }
 
         $this->hooks[$hookName] = serialize(new SerializableClosure($callback));
+    }
+
+    private function executeCallbackHook(MakerCheckerRequestInterface $request, string $hook): void
+    {
+        $callback = $this->getHook($request, $hook);
+
+        if ($callback) {
+            $callback($request);
+        }
+    }
+
+    private function getHook(MakerCheckerRequestInterface $request, string $hookName): ?Closure
+    {
+        $hooks = data_get($request->metadata, 'hooks', []);
+
+        $serializedClosure = data_get($hooks, $hookName);
+
+        return $serializedClosure ? unserialize($serializedClosure)->getClosure() : null;
+    }
+
+    private function fulfillRequest(MakerCheckerRequestInterface $request): void
+    {
+        if ($request->isOfType(RequestTypes::CREATE)) {
+            $subjectClass = $request->subject_class;
+
+            $subjectClass::create($request->payload);
+        } elseif ($request->isOfType(RequestTypes::UPDATE)) {
+            $request->subject->update($request->payload);
+        } elseif ($request->isOfType(RequestTypes::DELETE)) {
+            $request->subject->delete();
+        } else {
+            throw new Exception('Request does not have a valid request type');
+        }
     }
 
     private function assertRequestTypeIsNotSet(): void
