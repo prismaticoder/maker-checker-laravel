@@ -11,7 +11,7 @@ class InvalidRequestTypePassed extends InvalidArgumentException
     {
         $allowedRequestTypes = implode(',', RequestTypes::getAll());
         $message = vsprintf(
-            'Cannot initiate request: type: %s is not a valid request type. Request type must be one of: %s',
+            'The type: %s is not a valid request type. Request type must be one of: %s',
             [$requestType, $allowedRequestTypes],
         );
 
