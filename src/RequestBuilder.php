@@ -18,21 +18,11 @@ use Prismaticode\MakerChecker\Models\MakerCheckerRequest;
 
 class RequestBuilder
 {
-    private Model $maker;
-
-    private string $requestType;
-
-    private string $subjectClass;
-
-    private string $description;
-
-    private $subjectId;
-
-    private array $payload = [];
-
     private array $hooks = [];
 
     private Application $app;
+
+    private MakerCheckerRequest $request; //TODO: update this to be typehinted to the interface instead.
 
     private array $configData;
 
@@ -40,13 +30,28 @@ class RequestBuilder
     {
         $this->app = $app;
         $this->configData = $app['config']['makerchecker'];
+        $this->request = $this->createNewPendingRequest();
     }
 
+    public function description(string $description): self
+    {
+        $this->request->description = $description;
+
+        return $this;
+    }
+
+    /**
+     * Specify the user making the request.
+     *
+     * @param \Illuminate\Database\Eloquent\Model $maker
+     *
+     * @return self
+     */
     public function madeBy(Model $maker): self
     {
         $this->assertModelCanMakeRequests($maker);
 
-        $this->maker = $maker;
+        $this->request->madeBy()->associate($maker);
 
         return $this;
     }
@@ -67,9 +72,9 @@ class RequestBuilder
             throw new Exception('Unrecognized model: '.$model);
         }
 
-        $this->requestType = RequestTypes::CREATE;
-        $this->subjectClass = $model;
-        $this->payload = $payload;
+        $this->request->request_type = RequestTypes::CREATE;
+        $this->request->subject_class = $model;
+        $this->request->payload = $payload;
 
         return $this;
     }
@@ -86,10 +91,9 @@ class RequestBuilder
     {
         $this->assertRequestTypeIsNotSet();
 
-        $this->requestType = RequestTypes::UPDATE;
-        $this->subjectClass = $modelToUpdate->getMorphClass();
-        $this->subjectId = $modelToUpdate->getKey();
-        $this->payload = $requestedChanges;
+        $this->request->request_type = RequestTypes::UPDATE;
+        $this->request->subject()->associate($modelToUpdate);
+        $this->request->payload = $requestedChanges;
 
         return $this;
     }
@@ -105,9 +109,8 @@ class RequestBuilder
     {
         $this->assertRequestTypeIsNotSet();
 
-        $this->requestType = RequestTypes::DELETE;
-        $this->subjectClass = $modelToDelete->getMorphClass();
-        $this->subjectId = $modelToDelete->getKey();
+        $this->request->request_type = RequestTypes::DELETE;
+        $this->request->subject()->associate($modelToDelete);
 
         return $this;
     }
@@ -189,19 +192,24 @@ class RequestBuilder
      */
     public function save(): MakerCheckerRequestInterface
     {
-        return MakerCheckerRequest::create([
-            'request_type' => $this->requestType,
-            'status' => RequestStatuses::PENDING,
-            'payload' => $this->payload,
-            'subject_type' => $this->subjectClass,
-            'subject_id' => $this->subjectId,
-            'metadata' => ['hooks' => $this->hooks],
-            'maker_type' => $this->maker->getMorphClass(),
-            'maker_id' => $this->maker->getKey(),
-            'made_at' => Carbon::now(),
-            'description' => $this->description,
-            'code' => (string) Str::uuid(),
-        ]);
+        //TODO: Check for uniqueness in the request based on accepted params.
+
+        $request = $this->request;
+
+        if (! isset($request->description)) {
+            $request->description = "New {$request->type} request";
+        }
+
+        $request->metadata = $this->preprareMetadata();
+        $request->made_at = Carbon::now();
+
+        $request->save();
+
+        $this->request = $this->createNewPendingRequest(); //reset it back to how it was
+
+        //TODO: Fire event here to indicate the request has been initiated
+
+        return $request;
     }
 
     private function setHook(string $hookName, Closure $callback): void
@@ -213,9 +221,19 @@ class RequestBuilder
         $this->hooks[$hookName] = serialize(new SerializableClosure($callback));
     }
 
+    private function createNewPendingRequest(): MakerCheckerRequest
+    {
+        $request = new MakerCheckerRequest(); //TODO: Update this to use the model class configured by the user instead
+
+        $request->code = (string) Str::uuid();
+        $request->status = RequestStatuses::PENDING;
+
+        return $request;
+    }
+
     private function assertRequestTypeIsNotSet(): void
     {
-        if (isset($this->requestType)) {
+        if (isset($this->request->request_type)) {
             throw new Exception('Cannot modify request type, a request type has already been provided.');
         }
     }
@@ -236,5 +254,12 @@ class RequestBuilder
         if(! empty($allowedRequestors) && ! in_array($requestingModel, $allowedRequestors)) {
             throw ModelCannotMakeRequests::create($requestingModel);
         }
+    }
+
+    private function preprareMetadata(): array
+    {
+        return [
+            'hooks' => $this->hooks,
+        ];
     }
 }
