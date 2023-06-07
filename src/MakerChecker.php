@@ -42,17 +42,30 @@ class MakerChecker
         $this->config = $config;
     }
 
-    public function makeRequest(Model $requestor, string $requestType): self
+    /**
+     * Commence the process of initiating a new request.
+     *
+     * @param \Illuminate\Database\Eloquent\Model $requestor
+     *
+     * @return self
+     */
+    public function newRequest(Model $requestor): self
     {
         $this->assertModelCanMakeRequests($requestor);
-        $this->validateRequestType($requestType);
 
         $this->requestor = $requestor;
-        $this->requestType = $requestType;
 
         return $this;
     }
 
+    /**
+     * Commence initiation of a create request.
+     *
+     * @param string $model
+     * @param array $payload
+     *
+     * @return self
+     */
     public function create(string $model, array $payload = []): self
     {
         $this->assertRequestTypeIsNotSet();
@@ -68,6 +81,14 @@ class MakerChecker
         return $this;
     }
 
+    /**
+     * Commence initiation of an update request.
+     *
+     * @param \Illuminate\Database\Eloquent\Model $modelToUpdate
+     * @param array $requestedChanges
+     *
+     * @return self
+     */
     public function update(Model $modelToUpdate, array $requestedChanges): self
     {
         $this->assertRequestTypeIsNotSet();
@@ -80,6 +101,13 @@ class MakerChecker
         return $this;
     }
 
+    /**
+     * Commence initiation of a delete request.
+     *
+     * @param \Illuminate\Database\Eloquent\Model $modelToDelete
+     *
+     * @return self
+     */
     public function delete(Model $modelToDelete): self
     {
         $this->assertRequestTypeIsNotSet();
@@ -91,6 +119,13 @@ class MakerChecker
         return $this;
     }
 
+    /**
+     * Define a callback to be executed before a request is marked as approved.
+     *
+     * @param \Closure $callback
+     *
+     * @return self
+     */
     public function preApproval(Closure $callback): self
     {
         $this->setHook(Hooks::PRE_APPROVAL, $callback);
@@ -98,6 +133,13 @@ class MakerChecker
         return $this;
     }
 
+    /**
+     * Define a callback to be executed after a request is fulfilled.
+     *
+     * @param \Closure $callback
+     *
+     * @return self
+     */
     public function postApproval(Closure $callback): self
     {
         $this->setHook(Hooks::POST_APPROVAL, $callback);
@@ -105,6 +147,13 @@ class MakerChecker
         return $this;
     }
 
+    /**
+     * Define a callback to be executed before a request is marked as rejected.
+     *
+     * @param \Closure $callback
+     *
+     * @return self
+     */
     public function preRejection(Closure $callback): self
     {
         $this->setHook(Hooks::PRE_REJECTION, $callback);
@@ -112,6 +161,13 @@ class MakerChecker
         return $this;
     }
 
+    /**
+     * Define a callback to be executed after a request is rejected.
+     *
+     * @param \Closure $callback
+     *
+     * @return self
+     */
     public function postRejection(Closure $callback): self
     {
         $this->setHook(Hooks::POST_REJECTION, $callback);
@@ -119,6 +175,13 @@ class MakerChecker
         return $this;
     }
 
+    /**
+     * Define a callback to be executed in the event of a failure while fulfilling the request.
+     *
+     * @param \Closure $callback
+     *
+     * @return self
+     */
     public function onFailure(Closure $callback): self
     {
         $this->setHook(Hooks::ON_FAILURE, $callback);
@@ -126,6 +189,11 @@ class MakerChecker
         return $this;
     }
 
+    /**
+     * Persist the request into the data store.
+     *
+     * @return \Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface
+     */
     public function save(): MakerCheckerRequestInterface
     {
         return MakerCheckerRequest::create([
@@ -143,6 +211,15 @@ class MakerChecker
         ]);
     }
 
+    /**
+     * Approve a pending maker-checker request.
+     *
+     * @param \Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface $request
+     * @param \Illuminate\Database\Eloquent\Model $approver
+     * @param string|null $remarks
+     *
+     * @return \Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface
+     */
     public function approve(MakerCheckerRequestInterface $request, Model $approver, ?string $remarks): MakerCheckerRequestInterface
     {
         if (! $request instanceof Model) {
