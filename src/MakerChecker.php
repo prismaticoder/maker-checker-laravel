@@ -5,7 +5,7 @@ namespace Prismaticode\MakerChecker;
 use Carbon\Carbon;
 use Closure;
 use Exception;
-use Illuminate\Config\Repository;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -35,11 +35,14 @@ class MakerChecker
 
     private array $hooks = [];
 
-    private Repository $config;
+    private Application $app;
 
-    public function __construct(Repository $config)
+    private array $configData;
+
+    public function __construct(Application $app)
     {
-        $this->config = $config;
+        $this->app = $app;
+        $this->configData = $app['config']['makerchecker'];
     }
 
     /**
@@ -58,6 +61,15 @@ class MakerChecker
         return $this;
     }
 
+    public function madeBy(Model $maker): self
+    {
+        $this->assertModelCanMakeRequests($maker);
+
+        $this->requestor = $maker;
+
+        return $this;
+    }
+
     /**
      * Commence initiation of a create request.
      *
@@ -66,7 +78,7 @@ class MakerChecker
      *
      * @return self
      */
-    public function create(string $model, array $payload = []): self
+    public function toCreate(string $model, array $payload = []): self
     {
         $this->assertRequestTypeIsNotSet();
 
@@ -89,7 +101,7 @@ class MakerChecker
      *
      * @return self
      */
-    public function update(Model $modelToUpdate, array $requestedChanges): self
+    public function toUpdate(Model $modelToUpdate, array $requestedChanges): self
     {
         $this->assertRequestTypeIsNotSet();
 
@@ -108,7 +120,7 @@ class MakerChecker
      *
      * @return self
      */
-    public function delete(Model $modelToDelete): self
+    public function toDelete(Model $modelToDelete): self
     {
         $this->assertRequestTypeIsNotSet();
 
@@ -126,7 +138,7 @@ class MakerChecker
      *
      * @return self
      */
-    public function preApproval(Closure $callback): self
+    public function beforeApproval(Closure $callback): self
     {
         $this->setHook(Hooks::PRE_APPROVAL, $callback);
 
@@ -140,7 +152,7 @@ class MakerChecker
      *
      * @return self
      */
-    public function postApproval(Closure $callback): self
+    public function afterApproval(Closure $callback): self
     {
         $this->setHook(Hooks::POST_APPROVAL, $callback);
 
@@ -154,7 +166,7 @@ class MakerChecker
      *
      * @return self
      */
-    public function preRejection(Closure $callback): self
+    public function beforeRejection(Closure $callback): self
     {
         $this->setHook(Hooks::PRE_REJECTION, $callback);
 
@@ -168,7 +180,7 @@ class MakerChecker
      *
      * @return self
      */
-    public function postRejection(Closure $callback): self
+    public function afterRejection(Closure $callback): self
     {
         $this->setHook(Hooks::POST_REJECTION, $callback);
 
@@ -232,7 +244,7 @@ class MakerChecker
             throw new Exception('Cannot approve a non-pending request');
         }
 
-        $requestExpirationInMinutes = $this->config->get('makerchecker.request_expiration_in_minutes');
+        $requestExpirationInMinutes = data_get($this->configData, 'request_expiration_in_minutes');
 
         if ($requestExpirationInMinutes && Carbon::now()->diff($request->created_at) > $requestExpirationInMinutes) {
             throw new Exception('The request cannot be acted upon as it has expired.');
@@ -341,7 +353,7 @@ class MakerChecker
     private function assertModelCanMakeRequests(Model $requestor): void
     {
         $requestingModel = get_class($requestor);
-        $allowedRequestors = $this->config->get('makerchecker.whitelisted_models.maker');
+        $allowedRequestors = data_get($this->configData, 'whitelisted_models.maker');
 
         if (is_string($allowedRequestors)) {
             $allowedRequestors = [$allowedRequestors];
@@ -359,7 +371,7 @@ class MakerChecker
     private function assertModelCanCheckRequests(Model $checker): void
     {
         $checkerModel = get_class($checker);
-        $allowedCheckers = $this->config->get('makerchecker.whitelisted_models.checker');
+        $allowedCheckers = data_get($this->configData, 'whitelisted_models.checker');
 
         if (is_string($allowedCheckers)) {
             $allowedCheckers = [$allowedCheckers];
