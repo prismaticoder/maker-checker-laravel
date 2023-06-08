@@ -38,7 +38,7 @@ class MakerCheckerRequestManager
      */
     public function request(): RequestBuilder
     {
-        return new RequestBuilder($this->app);
+        return $this->app[RequestBuilder::class];
     }
 
     /**
