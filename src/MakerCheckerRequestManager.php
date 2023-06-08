@@ -8,18 +8,19 @@ use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use Laravel\SerializableClosure\SerializableClosure;
 use Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface;
 use Prismaticode\MakerChecker\Enums\Hooks;
 use Prismaticode\MakerChecker\Enums\RequestStatuses;
 use Prismaticode\MakerChecker\Enums\RequestTypes;
 use Prismaticode\MakerChecker\Exceptions\InvalidRequestTypePassed;
 use Prismaticode\MakerChecker\Exceptions\ModelCannotCheckRequests;
+use Prismaticode\MakerChecker\Exceptions\RequestApproved;
+use Prismaticode\MakerChecker\Exceptions\RequestFailed;
+use Prismaticode\MakerChecker\Exceptions\RequestInitiated;
+use Prismaticode\MakerChecker\Exceptions\RequestRejected;
 
 class MakerCheckerRequestManager
 {
-    private array $hooks = [];
-
     private Application $app;
 
     private array $configData;
@@ -41,59 +42,39 @@ class MakerCheckerRequestManager
     }
 
     /**
-     * Define a callback to be executed before a request is marked as approved.
+     * Define a callback to be executed after any request is initiated.
      *
      * @param \Closure $callback
      *
-     * @return self
+     * @return void
      */
-    public function beforeApproval(Closure $callback): self
+    public function afterInitiating(Closure $callback): void
     {
-        $this->setHook(Hooks::PRE_APPROVAL, $callback);
-
-        return $this;
+        $this->app['events']->listen(RequestInitiated::class, $callback);
     }
 
     /**
-     * Define a callback to be executed after a request is fulfilled.
+     * Define a callback to be executed after any request is fulfilled.
      *
      * @param \Closure $callback
      *
-     * @return self
+     * @return void
      */
-    public function afterApproval(Closure $callback): self
+    public function afterApproving(Closure $callback): void
     {
-        $this->setHook(Hooks::POST_APPROVAL, $callback);
-
-        return $this;
+        $this->app['events']->listen(RequestApproved::class, $callback);
     }
 
     /**
-     * Define a callback to be executed before a request is marked as rejected.
+     * Define a callback to be executed after any request is rejected.
      *
      * @param \Closure $callback
      *
-     * @return self
+     * @return void
      */
-    public function beforeRejection(Closure $callback): self
+    public function afterRejecting(Closure $callback): void
     {
-        $this->setHook(Hooks::PRE_REJECTION, $callback);
-
-        return $this;
-    }
-
-    /**
-     * Define a callback to be executed after a request is rejected.
-     *
-     * @param \Closure $callback
-     *
-     * @return self
-     */
-    public function afterRejection(Closure $callback): self
-    {
-        $this->setHook(Hooks::POST_REJECTION, $callback);
-
-        return $this;
+        $this->app['events']->listen(RequestRejected::class, $callback);
     }
 
     /**
@@ -101,13 +82,11 @@ class MakerCheckerRequestManager
      *
      * @param \Closure $callback
      *
-     * @return self
+     * @return void
      */
-    public function onFailure(Closure $callback): self
+    public function onFailure(Closure $callback): void
     {
-        $this->setHook(Hooks::ON_FAILURE, $callback);
-
-        return $this;
+        $this->app['events']->listen(RequestFailed::class, $callback);
     }
 
     /**
@@ -163,6 +142,8 @@ class MakerCheckerRequestManager
 
             $this->executeCallbackHook($request, Hooks::POST_APPROVAL); //TODO: do this inside a job instead.
 
+            $this->app['events']->dispatch(new RequestApproved($request));
+
             return $request;
 
             //TODO: Call the general event for post approval
@@ -184,7 +165,7 @@ class MakerCheckerRequestManager
                 $onFailureCallBack($e);
             }
 
-            //TODO: Call the general event for failure
+            $this->app['events']->dispatch(new RequestFailed($request, $e));
         }
     }
 
@@ -206,7 +187,7 @@ class MakerCheckerRequestManager
         $this->assertModelCanCheckRequests($rejector);
 
         if (! $request->isOfStatus(RequestStatuses::PENDING)) {
-            throw new Exception('Cannot approve a non-pending request');
+            throw new Exception('Cannot reject a non-pending request');
         }
 
         $requestExpirationInMinutes = data_get($this->configData, 'request_expiration_in_minutes');
@@ -236,9 +217,9 @@ class MakerCheckerRequestManager
 
             $this->executeCallbackHook($request, Hooks::POST_REJECTION); //TODO: do this inside a job instead.
 
-            return $request;
+            $this->app['events']->dispatch(new RequestRejected($request));
 
-            //TODO: Call the general event for post approval
+            return $request;
         } catch (\Throwable $e) {
             $request->update([
                 'status' => RequestStatuses::FAILED,
@@ -255,7 +236,7 @@ class MakerCheckerRequestManager
                 $onFailureCallBack($e);
             }
 
-            //TODO: Call the general event for failure
+            $this->app['events']->dispatch(new RequestFailed($request, $e));
         }
     }
 
@@ -266,15 +247,6 @@ class MakerCheckerRequestManager
         if ($callback) {
             $callback($request);
         }
-    }
-
-    private function setHook(string $hookName, Closure $callback): void
-    {
-        if (! in_array($hookName, Hooks::getAll())) {
-            throw new Exception('Invalid hook passed.');
-        }
-
-        $this->hooks[$hookName] = serialize(new SerializableClosure($callback));
     }
 
     private function getHook(MakerCheckerRequestInterface $request, string $hookName): ?Closure
