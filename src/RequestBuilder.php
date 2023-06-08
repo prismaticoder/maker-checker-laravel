@@ -114,7 +114,7 @@ class RequestBuilder
         $this->assertRequestTypeIsNotSet();
 
         if (! is_subclass_of($model, Model::class)) {
-            throw new Exception('Unrecognized model: '.$model);
+            throw new RequestCouldNotBeInitiated('Unrecognized model: '.$model);
         }
 
         $this->request->request_type = RequestTypes::CREATE;
@@ -163,7 +163,7 @@ class RequestBuilder
     private function assertRequestTypeIsNotSet(): void
     {
         if (isset($this->request->request_type)) {
-            throw new Exception('Cannot modify request type, a request type has already been provided.');
+            throw new RequestCouldNotBeInitiated('Cannot modify request type, a request type has already been provided.');
         }
     }
 
