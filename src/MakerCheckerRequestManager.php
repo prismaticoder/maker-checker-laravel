@@ -104,21 +104,7 @@ class MakerCheckerRequestManager
             throw new Exception('Request class must extend the base Eloquent model class.');
         }
 
-        $this->assertModelCanCheckRequests($approver);
-
-        if (! $request->isOfStatus(RequestStatuses::PENDING)) {
-            throw new Exception('Cannot approve a non-pending request');
-        }
-
-        $requestExpirationInMinutes = data_get($this->configData, 'request_expiration_in_minutes');
-
-        if ($requestExpirationInMinutes && Carbon::now()->diff($request->created_at) > $requestExpirationInMinutes) {
-            throw new Exception('The request cannot be acted upon as it has expired.');
-        }
-
-        if ($approver->is($request->maker)) {
-            throw new Exception('Cannot approve a request made by you.');
-        }
+        $this->assertRequestCanBeChecked($request, $approver);
 
         $request->update(['status' => RequestStatuses::PROCESSING]);
 
@@ -184,21 +170,7 @@ class MakerCheckerRequestManager
             throw new Exception('Request class must extend the base Eloquent model class.');
         }
 
-        $this->assertModelCanCheckRequests($rejector);
-
-        if (! $request->isOfStatus(RequestStatuses::PENDING)) {
-            throw new Exception('Cannot reject a non-pending request');
-        }
-
-        $requestExpirationInMinutes = data_get($this->configData, 'request_expiration_in_minutes');
-
-        if ($requestExpirationInMinutes && Carbon::now()->diff($request->created_at) > $requestExpirationInMinutes) {
-            throw new Exception('The request cannot be acted upon as it has expired.');
-        }
-
-        if ($rejector->is($request->maker)) {
-            throw new Exception('Cannot reject a request made by you.');
-        }
+        $this->assertRequestCanBeChecked($request, $rejector);
 
         $request->update(['status' => RequestStatuses::PROCESSING]);
 
@@ -237,6 +209,25 @@ class MakerCheckerRequestManager
             }
 
             $this->app['events']->dispatch(new RequestFailed($request, $e));
+        }
+    }
+
+    private function assertRequestCanBeChecked(MakerCheckerRequestInterface $request, Model $checker): void
+    {
+        $this->assertModelCanCheckRequests($checker);
+
+        if (! $request->isOfStatus(RequestStatuses::PENDING)) {
+            throw new Exception('Cannot act on a non-pending request');
+        }
+
+        $requestExpirationInMinutes = data_get($this->configData, 'request_expiration_in_minutes');
+
+        if ($requestExpirationInMinutes && Carbon::now()->diff($request->created_at) > $requestExpirationInMinutes) {
+            throw new Exception('The request cannot be acted upon as it has expired.');
+        }
+
+        if ($checker->is($request->maker)) {
+            throw new Exception('Request checker cannot be the same as the maker.');
         }
     }
 
