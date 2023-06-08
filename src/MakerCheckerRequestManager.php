@@ -188,6 +188,77 @@ class MakerCheckerRequestManager
         }
     }
 
+    /**
+     * Reject a pending maker-checker request.
+     *
+     * @param \Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface $request
+     * @param \Illuminate\Database\Eloquent\Model $rejector
+     * @param string|null $remarks
+     *
+     * @return \Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface
+     */
+    public function reject(MakerCheckerRequestInterface $request, Model $rejector, ?string $remarks): MakerCheckerRequestInterface
+    {
+        if (! $request instanceof Model) {
+            throw new Exception('Request class must extend the base Eloquent model class.');
+        }
+
+        $this->assertModelCanCheckRequests($rejector);
+
+        if (! $request->isOfStatus(RequestStatuses::PENDING)) {
+            throw new Exception('Cannot approve a non-pending request');
+        }
+
+        $requestExpirationInMinutes = data_get($this->configData, 'request_expiration_in_minutes');
+
+        if ($requestExpirationInMinutes && Carbon::now()->diff($request->created_at) > $requestExpirationInMinutes) {
+            throw new Exception('The request cannot be acted upon as it has expired.');
+        }
+
+        if ($rejector->is($request->maker)) {
+            throw new Exception('Cannot reject a request made by you.');
+        }
+
+        $request->update(['status' => RequestStatuses::PROCESSING]);
+
+        try {
+            $this->executeCallbackHook($request, Hooks::PRE_REJECTION);
+
+            //TODO: put the below in a job instead. This will be useful when it comes to executing generic actions.
+
+            $request->update([
+                'status' => RequestStatuses::REJECTED,
+                'checker_type' => $rejector->getMorphClass(),
+                'checker_id' => $rejector->getKey(),
+                'checked_at' => Carbon::now(),
+                'remarks' => $remarks,
+            ]);
+
+            $this->executeCallbackHook($request, Hooks::POST_REJECTION); //TODO: do this inside a job instead.
+
+            return $request;
+
+            //TODO: Call the general event for post approval
+        } catch (\Throwable $e) {
+            $request->update([
+                'status' => RequestStatuses::FAILED,
+                'exception' => $e->getTraceAsString(),
+                'checker_type' => $rejector->getMorphClass(),
+                'checker_id' => $rejector->getKey(),
+                'checked_at' => Carbon::now(),
+                'remarks' => $remarks,
+            ]);
+
+            $onFailureCallBack = $this->getHook($request, Hooks::ON_FAILURE);
+
+            if ($onFailureCallBack) {
+                $onFailureCallBack($e);
+            }
+
+            //TODO: Call the general event for failure
+        }
+    }
+
     private function executeCallbackHook(MakerCheckerRequestInterface $request, string $hook): void
     {
         $callback = $this->getHook($request, $hook);
