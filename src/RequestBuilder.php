@@ -16,6 +16,7 @@ use Prismaticode\MakerChecker\Enums\RequestStatuses;
 use Prismaticode\MakerChecker\Enums\RequestTypes;
 use Prismaticode\MakerChecker\Exceptions\DuplicateRequestException;
 use Prismaticode\MakerChecker\Exceptions\ModelCannotMakeRequests;
+use Prismaticode\MakerChecker\Exceptions\RequestCouldNotBeInitiated;
 use Prismaticode\MakerChecker\Models\MakerCheckerRequest;
 
 class RequestBuilder
@@ -258,22 +259,26 @@ class RequestBuilder
             $request->description = "New {$request->type} request"; //TODO: Change this later to reflect something more dynamic.
         }
 
-        $request->metadata = $this->preprareMetadata();
+        $request->metadata = $this->generateMetadata();
         $request->made_at = Carbon::now();
 
         if (data_get($this->configData, 'ensure_requests_are_unique')) {
             $this->assertRequestIsUnique($request);
         }
 
-        $request->save();
+        try {
+            $request->save();
 
-        $this->request = $this->createNewPendingRequest(); //reset it back to how it was
-        $this->hooks = [];
-        $this->uniqueIdentifiers = [];
+            //TODO: Fire event here to indicate the request has been initiated
 
-        //TODO: Fire event here to indicate the request has been initiated
-
-        return $request;
+            return $request;
+        } catch (\Throwable $e) {
+            throw new RequestCouldNotBeInitiated("Error initiating request: $e->getMessage()", 0, $e);
+        } finally {
+            $this->request = $this->createNewPendingRequest(); //reset it back to how it was
+            $this->hooks = [];
+            $this->uniqueIdentifiers = [];
+        }
     }
 
     private function createNewPendingRequest(): MakerCheckerRequest
@@ -286,13 +291,20 @@ class RequestBuilder
         return $request;
     }
 
-    private function preprareMetadata(): array
+    private function generateMetadata(): array
     {
         return [
             'hooks' => $this->hooks,
         ];
     }
 
+    /**
+     * Assert that there's no pending request with the same properties as this new request.
+     *
+     * @param \Prismaticode\MakerChecker\Models\MakerCheckerRequest $request
+     *
+     * @return void
+     */
     protected function assertRequestIsUnique(MakerCheckerRequest $request): void
     {
         $baseQuery = MakerCheckerRequest::where('status', RequestStatuses::PENDING)
