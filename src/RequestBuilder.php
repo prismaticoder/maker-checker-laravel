@@ -82,6 +82,24 @@ class RequestBuilder
         return $this;
     }
 
+    private function assertModelCanMakeRequests(Model $requestor): void
+    {
+        $requestingModel = get_class($requestor);
+        $allowedRequestors = data_get($this->configData, 'whitelisted_models.maker');
+
+        if (is_string($allowedRequestors)) {
+            $allowedRequestors = [$allowedRequestors];
+        }
+
+        if (! is_array($allowedRequestors)) {
+            $allowedRequestors = [];
+        }
+
+        if(! empty($allowedRequestors) && ! in_array($requestingModel, $allowedRequestors)) {
+            throw ModelCannotMakeRequests::create($requestingModel);
+        }
+    }
+
     /**
      * Commence initiation of a create request.
      *
@@ -139,6 +157,13 @@ class RequestBuilder
         $this->request->subject()->associate($modelToDelete);
 
         return $this;
+    }
+
+    private function assertRequestTypeIsNotSet(): void
+    {
+        if (isset($this->request->request_type)) {
+            throw new Exception('Cannot modify request type, a request type has already been provided.');
+        }
     }
 
     /**
@@ -211,6 +236,15 @@ class RequestBuilder
         return $this;
     }
 
+    private function setHook(string $hookName, Closure $callback): void
+    {
+        if (! in_array($hookName, Hooks::getAll())) {
+            throw new Exception('Invalid hook passed.');
+        }
+
+        $this->hooks[$hookName] = serialize(new SerializableClosure($callback));
+    }
+
     /**
      * Persist the request into the data store.
      *
@@ -242,15 +276,6 @@ class RequestBuilder
         return $request;
     }
 
-    private function setHook(string $hookName, Closure $callback): void
-    {
-        if (! in_array($hookName, Hooks::getAll())) {
-            throw new Exception('Invalid hook passed.');
-        }
-
-        $this->hooks[$hookName] = serialize(new SerializableClosure($callback));
-    }
-
     private function createNewPendingRequest(): MakerCheckerRequest
     {
         $request = new MakerCheckerRequest(); //TODO: Update this to use the model class configured by the user instead
@@ -261,31 +286,6 @@ class RequestBuilder
         return $request;
     }
 
-    private function assertRequestTypeIsNotSet(): void
-    {
-        if (isset($this->request->request_type)) {
-            throw new Exception('Cannot modify request type, a request type has already been provided.');
-        }
-    }
-
-    private function assertModelCanMakeRequests(Model $requestor): void
-    {
-        $requestingModel = get_class($requestor);
-        $allowedRequestors = data_get($this->configData, 'whitelisted_models.maker');
-
-        if (is_string($allowedRequestors)) {
-            $allowedRequestors = [$allowedRequestors];
-        }
-
-        if (! is_array($allowedRequestors)) {
-            $allowedRequestors = [];
-        }
-
-        if(! empty($allowedRequestors) && ! in_array($requestingModel, $allowedRequestors)) {
-            throw ModelCannotMakeRequests::create($requestingModel);
-        }
-    }
-
     private function preprareMetadata(): array
     {
         return [
@@ -293,7 +293,7 @@ class RequestBuilder
         ];
     }
 
-    private function assertRequestIsUnique(MakerCheckerRequest $request): void
+    protected function assertRequestIsUnique(MakerCheckerRequest $request): void
     {
         $baseQuery = MakerCheckerRequest::where('status', RequestStatuses::PENDING)
             ->where('request_type', $request->request_type)
