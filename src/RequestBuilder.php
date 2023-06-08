@@ -7,18 +7,22 @@ use Closure;
 use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Laravel\SerializableClosure\SerializableClosure;
 use Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface;
 use Prismaticode\MakerChecker\Enums\Hooks;
 use Prismaticode\MakerChecker\Enums\RequestStatuses;
 use Prismaticode\MakerChecker\Enums\RequestTypes;
+use Prismaticode\MakerChecker\Exceptions\DuplicateRequestException;
 use Prismaticode\MakerChecker\Exceptions\ModelCannotMakeRequests;
 use Prismaticode\MakerChecker\Models\MakerCheckerRequest;
 
 class RequestBuilder
 {
     private array $hooks = [];
+
+    private array $uniqueIdentifiers = [];
 
     private Application $app;
 
@@ -33,9 +37,31 @@ class RequestBuilder
         $this->request = $this->createNewPendingRequest();
     }
 
+    /**
+     * Add a desription for the request.
+     *
+     * @param string $description
+     *
+     * @return self
+     */
     public function description(string $description): self
     {
         $this->request->description = $description;
+
+        return $this;
+    }
+
+    /**
+     * Provide the fields to check on the request payload for determining request uniqueness. If not provided, the package
+     * will check against the entire payload.
+     *
+     * @param ...$uniqueIdentifiers
+     *
+     * @return void
+     */
+    public function uniqueBy(...$uniqueIdentifiers) //TODO: Note that it is only useful for MysQL, Postgres and SQLite 3.3.9+
+    {
+        $this->uniqueIdentifiers = $uniqueIdentifiers;
 
         return $this;
     }
@@ -192,20 +218,24 @@ class RequestBuilder
      */
     public function save(): MakerCheckerRequestInterface
     {
-        //TODO: Check for uniqueness in the request based on accepted params.
-
         $request = $this->request;
 
         if (! isset($request->description)) {
-            $request->description = "New {$request->type} request";
+            $request->description = "New {$request->type} request"; //TODO: Change this later to reflect something more dynamic.
         }
 
         $request->metadata = $this->preprareMetadata();
         $request->made_at = Carbon::now();
 
+        if (data_get($this->configData, 'ensure_requests_are_unique')) {
+            $this->assertRequestIsUnique($request);
+        }
+
         $request->save();
 
         $this->request = $this->createNewPendingRequest(); //reset it back to how it was
+        $this->hooks = [];
+        $this->uniqueIdentifiers = [];
 
         //TODO: Fire event here to indicate the request has been initiated
 
@@ -261,5 +291,27 @@ class RequestBuilder
         return [
             'hooks' => $this->hooks,
         ];
+    }
+
+    private function assertRequestIsUnique(MakerCheckerRequest $request): void
+    {
+        $baseQuery = MakerCheckerRequest::where('status', RequestStatuses::PENDING)
+            ->where('request_type', $request->request_type)
+            ->where('subject_class', $request->subject_class)
+            ->where('subject_id', $request->subject_id);
+
+        if (empty($this->uniqueIdentifiers) || empty(Arr::pluck($request->payload, $this->uniqueIdentifiers))) {
+            $baseQuery->where('payload', $request->payload);
+        } else {
+            $uniqueValues = Arr::pluck($request->payload, $this->uniqueIdentifiers);
+
+            foreach ($uniqueValues as $key => $value) {
+                $baseQuery->where("payload->{$key}", $value);
+            }
+        }
+
+        if ($baseQuery->exists()) {
+            throw DuplicateRequestException::create($request->request_type);
+        }
     }
 }

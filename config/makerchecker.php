@@ -2,6 +2,11 @@
 
 return [
     /*
+     * This configuration is to determine whether you want to have the package run checks for whether a request already
+     * exists before creating one. If set to false, duplicate requests (with similar payload/subjects) would be allowed.
+     */
+    'ensure_requests_are_unique' => true,
+    /*
      * The time, in minutes, at which point a pending request is marked as expired.
      * If left as null, pending requests would be allowed to stay as long as possible till an action is performed on them.
      */
