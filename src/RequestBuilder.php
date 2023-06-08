@@ -17,6 +17,7 @@ use Prismaticode\MakerChecker\Enums\RequestTypes;
 use Prismaticode\MakerChecker\Exceptions\DuplicateRequestException;
 use Prismaticode\MakerChecker\Exceptions\ModelCannotMakeRequests;
 use Prismaticode\MakerChecker\Exceptions\RequestCouldNotBeInitiated;
+use Prismaticode\MakerChecker\Exceptions\RequestInitiated;
 use Prismaticode\MakerChecker\Models\MakerCheckerRequest;
 
 class RequestBuilder
@@ -269,7 +270,7 @@ class RequestBuilder
         try {
             $request->save();
 
-            //TODO: Fire event here to indicate the request has been initiated
+            $this->app['events']->dispatch(new RequestInitiated($request));
 
             return $request;
         } catch (\Throwable $e) {
