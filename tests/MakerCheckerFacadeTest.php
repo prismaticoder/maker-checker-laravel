@@ -2,12 +2,15 @@
 
 namespace Prismaticode\MakerChecker\Tests;
 
+use Carbon\Carbon;
+use Exception;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Event;
 use Prismaticode\MakerChecker\Enums\RequestStatuses;
 use Prismaticode\MakerChecker\Enums\RequestTypes;
 use Prismaticode\MakerChecker\Events\RequestApproved;
 use Prismaticode\MakerChecker\Events\RequestInitiated;
+use Prismaticode\MakerChecker\Events\RequestRejected;
 use Prismaticode\MakerChecker\Exceptions\DuplicateRequestException;
 use Prismaticode\MakerChecker\Facades\MakerChecker;
 use Prismaticode\MakerChecker\Tests\Models\Article;
@@ -93,7 +96,7 @@ class MakerCheckerFacadeTest extends TestCase
         Event::assertDispatched(RequestInitiated::class);
     }
 
-    public function testItCreatesTheRequiredEntryWhenACreateRequestIsApproved()
+    public function testItCreatesTheRequestedEntryWhenACreateRequestIsApproved()
     {
         $payload = $this->getArticleCreationPayload();
         $request = MakerChecker::request()
@@ -122,7 +125,86 @@ class MakerCheckerFacadeTest extends TestCase
         Event::assertDispatched(RequestApproved::class);
     }
 
-    public function testItUpdatesTheRequiredEntryWhenAUpdateRequestIsApproved()
+    public function testItDoesNotCreateTheRequestedEntryWhenACreateRequestIsRejected()
+    {
+        $payload = $this->getArticleCreationPayload();
+        $request = MakerChecker::request()
+            ->toCreate(Article::class, $payload)
+            ->madeBy($this->makingUser)
+            ->save();
+
+        Event::fake();
+
+        MakerChecker::reject($request, $this->checkingUser);
+
+        $this->assertDatabaseHas('maker_checker_requests', [
+            'subject_type' => Article::class,
+            'subject_id' => null,
+            'request_type' => RequestTypes::CREATE,
+            'status' => RequestStatuses::REJECTED,
+            'payload->title' => $payload['title'],
+            'payload->description' => $payload['description'],
+        ]);
+
+        $this->assertDatabaseMissing('articles', [
+            'title' => $payload['title'],
+            'description' => $payload['description'],
+        ]);
+
+        Event::assertDispatched(RequestRejected::class);
+    }
+
+    public function testItDoesNotAllowTheRequestMakerToBeTheRequestChecker()
+    {
+        $payload = $this->getArticleCreationPayload();
+        $request = MakerChecker::request()
+            ->toCreate(Article::class, $payload)
+            ->madeBy($this->makingUser)
+            ->save();
+
+        $this->expectException(Exception::class);
+
+        MakerChecker::approve($request, $this->makingUser);
+    }
+
+    public function testItCannotAllowANonPendingRequestToBeChecked()
+    {
+        $payload = $this->getArticleCreationPayload();
+        $request = MakerChecker::request()
+            ->toCreate(Article::class, $payload)
+            ->madeBy($this->makingUser)
+            ->save();
+
+        $request->update(['status' => RequestStatuses::APPROVED]);
+
+        $this->expectException(Exception::class);
+
+        MakerChecker::approve($request, $this->checkingUser);
+    }
+
+    public function testItCannotAllowAnExpiredRequestToBeCheckedIfExpiryIsSet()
+    {
+        $payload = $this->getArticleCreationPayload();
+
+        Carbon::setTestNow();
+
+        $expirationInMinutes = $this->faker->randomNumber(2);
+
+        $this->app['config']->set('makerchecker.request_expiration_in_minutes', $expirationInMinutes);
+
+        $request = MakerChecker::request()
+            ->toCreate(Article::class, $payload)
+            ->madeBy($this->makingUser)
+            ->save();
+
+        $request->update(['created_at' => Carbon::now()->subMinutes($expirationInMinutes + 1)]);
+
+        $this->expectException(Exception::class);
+
+        MakerChecker::approve($request, $this->checkingUser);
+    }
+
+    public function testItUpdatesTheRequestedEntryWhenAnUpdateRequestIsApproved()
     {
         $article = $this->createTestArticle();
         $newTitle = $this->faker->word();
@@ -149,7 +231,34 @@ class MakerCheckerFacadeTest extends TestCase
         Event::assertDispatched(RequestApproved::class);
     }
 
-    public function testItDeletesTheRequiredEntryWhenADeleteRequestIsApproved()
+    public function testItDoesNotUpdateTheRequestedEntryWhenAnUpdateRequestIsRejected()
+    {
+        $article = $this->createTestArticle();
+        $newTitle = $this->faker->word();
+
+        $request = MakerChecker::request()->toUpdate($article, ['title' => $newTitle])->madeBy($this->makingUser)->save();
+
+        Event::fake();
+
+        MakerChecker::reject($request, $this->checkingUser);
+
+        $this->assertDatabaseHas('maker_checker_requests', [
+            'subject_type' => $article->getMorphClass(),
+            'subject_id' => $article->getKey(),
+            'request_type' => RequestTypes::UPDATE,
+            'status' => RequestStatuses::REJECTED,
+            'payload->title' => $newTitle,
+        ]);
+
+        $this->assertDatabaseMissing('articles', [
+            'id' => $article->id,
+            'title' => $newTitle,
+        ]);
+
+        Event::assertDispatched(RequestRejected::class);
+    }
+
+    public function testItDeletesTheRequestedEntryWhenADeleteRequestIsApproved()
     {
         $article = $this->createTestArticle();
 
@@ -173,6 +282,30 @@ class MakerCheckerFacadeTest extends TestCase
         Event::assertDispatched(RequestApproved::class);
     }
 
+    public function testItDoesNotDeleteTheRequestedEntryWhenADeleteRequestIsRejected()
+    {
+        $article = $this->createTestArticle();
+
+        $request = MakerChecker::request()->toDelete($article)->madeBy($this->makingUser)->save();
+
+        Event::fake();
+
+        MakerChecker::reject($request, $this->checkingUser);
+
+        $this->assertDatabaseHas('maker_checker_requests', [
+            'subject_type' => $article->getMorphClass(),
+            'subject_id' => $article->getKey(),
+            'request_type' => RequestTypes::DELETE,
+            'status' => RequestStatuses::REJECTED,
+        ]);
+
+        $this->assertDatabaseHas('articles', [
+            'id' => $article->id,
+        ]);
+
+        Event::assertDispatched(RequestRejected::class);
+    }
+
     private function createTestArticle(?string $title = null): Article
     {
         return Article::create($this->getArticleCreationPayload());
@@ -187,10 +320,10 @@ class MakerCheckerFacadeTest extends TestCase
         ];
     }
 
-    //use faker, and perform actions on the `Article` resource not the user resource
-    //cannot approve/reject requests by you
-    //cannot approve/reject requests that have expired
-    //cannot approve/reject a non-pending request
+    //use faker, and perform actions on the `Article` resource not the user resource -
+    //cannot approve/reject requests by you -
+    //cannot approve/reject requests that have expired -
+    //cannot approve/reject a non-pending request -
     //assert that the request fails when it cannot process it
 
     //cannot initiate requests if model isn't whitelisted to do so
