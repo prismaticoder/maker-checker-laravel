@@ -1,6 +1,6 @@
 <?php
 
-namespace Prismaticode\MakerChecker\Exceptions;
+namespace Prismaticode\MakerChecker\Events;
 
 use Prismaticode\MakerChecker\Models\MakerCheckerRequest;
 use Throwable;
