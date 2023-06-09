@@ -7,10 +7,15 @@ use Illuminate\Contracts\Config\Repository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Orchestra\Testbench\TestCase as TestbenchTestCase;
 use Prismaticode\MakerChecker\MakerCheckerServiceProvider;
+use Prismaticode\MakerChecker\Tests\Models\User;
 
 abstract class TestCase extends TestbenchTestCase
 {
     use RefreshDatabase;
+
+    protected User $makingUser;
+
+    protected User $checkingUser;
 
     /**
      * Setup the test environment.
@@ -23,7 +28,9 @@ abstract class TestCase extends TestbenchTestCase
 
         $this->migrateMakerCheckerRequestsTable();
 
-        // dd(config('database'));
+        $this->makingUser = User::first();
+        $this->checkingUser = User::orderByDesc('id')->first();
+
         // Code after application created.
     }
 
@@ -85,6 +92,6 @@ abstract class TestCase extends TestbenchTestCase
     {
         require_once __DIR__.'/../database/migrations/create_maker_checker_requests_table.php.stub';
 
-        (new CreateMakerCheckerRequestsTable())->up();
+        (new CreateMakerCheckerRequestsTable())->up(); //TODO: find another way to do this without going through this means
     }
 }

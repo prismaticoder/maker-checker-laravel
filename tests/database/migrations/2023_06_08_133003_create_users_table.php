@@ -26,7 +26,8 @@ class CreateUsersTable extends Migration
     private function createDefaultUser(): void
     {
         DB::table('users')->insert([
-            'name' => 'Prismaticode',
+            ['name' => fake()->name],
+            ['name' => fake()->name],
         ]);
     }
 
