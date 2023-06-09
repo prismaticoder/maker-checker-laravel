@@ -14,10 +14,10 @@ use Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface;
 use Prismaticode\MakerChecker\Enums\Hooks;
 use Prismaticode\MakerChecker\Enums\RequestStatuses;
 use Prismaticode\MakerChecker\Enums\RequestTypes;
+use Prismaticode\MakerChecker\Events\RequestInitiated;
 use Prismaticode\MakerChecker\Exceptions\DuplicateRequestException;
 use Prismaticode\MakerChecker\Exceptions\ModelCannotMakeRequests;
 use Prismaticode\MakerChecker\Exceptions\RequestCouldNotBeInitiated;
-use Prismaticode\MakerChecker\Exceptions\RequestInitiated;
 use Prismaticode\MakerChecker\Models\MakerCheckerRequest;
 
 class RequestBuilder
@@ -79,7 +79,7 @@ class RequestBuilder
     {
         $this->assertModelCanMakeRequests($maker);
 
-        $this->request->madeBy()->associate($maker);
+        $this->request->maker()->associate($maker);
 
         return $this;
     }
@@ -119,7 +119,7 @@ class RequestBuilder
         }
 
         $this->request->request_type = RequestTypes::CREATE;
-        $this->request->subject_class = $model;
+        $this->request->subject_type = $model;
         $this->request->payload = $payload;
 
         return $this;
@@ -274,7 +274,7 @@ class RequestBuilder
 
             return $request;
         } catch (\Throwable $e) {
-            throw new RequestCouldNotBeInitiated("Error initiating request: $e->getMessage()", 0, $e);
+            throw new RequestCouldNotBeInitiated("Error initiating request: {$e->getMessage()}", 0, $e);
         } finally {
             $this->request = $this->createNewPendingRequest(); //reset it back to how it was
             $this->hooks = [];
@@ -310,11 +310,11 @@ class RequestBuilder
     {
         $baseQuery = MakerCheckerRequest::where('status', RequestStatuses::PENDING)
             ->where('request_type', $request->request_type)
-            ->where('subject_class', $request->subject_class)
+            ->where('subject_type', $request->subject_type)
             ->where('subject_id', $request->subject_id);
 
         if (empty($this->uniqueIdentifiers) || empty(Arr::pluck($request->payload, $this->uniqueIdentifiers))) {
-            $baseQuery->where('payload', $request->payload);
+            $baseQuery->where('payload', json_encode($request->payload));
         } else {
             $uniqueValues = Arr::pluck($request->payload, $this->uniqueIdentifiers);
 

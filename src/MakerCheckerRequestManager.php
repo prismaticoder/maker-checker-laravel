@@ -12,12 +12,12 @@ use Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface;
 use Prismaticode\MakerChecker\Enums\Hooks;
 use Prismaticode\MakerChecker\Enums\RequestStatuses;
 use Prismaticode\MakerChecker\Enums\RequestTypes;
+use Prismaticode\MakerChecker\Events\RequestApproved;
+use Prismaticode\MakerChecker\Events\RequestFailed;
+use Prismaticode\MakerChecker\Events\RequestInitiated;
+use Prismaticode\MakerChecker\Events\RequestRejected;
 use Prismaticode\MakerChecker\Exceptions\InvalidRequestTypePassed;
 use Prismaticode\MakerChecker\Exceptions\ModelCannotCheckRequests;
-use Prismaticode\MakerChecker\Exceptions\RequestApproved;
-use Prismaticode\MakerChecker\Exceptions\RequestFailed;
-use Prismaticode\MakerChecker\Exceptions\RequestInitiated;
-use Prismaticode\MakerChecker\Exceptions\RequestRejected;
 
 class MakerCheckerRequestManager
 {
@@ -98,7 +98,7 @@ class MakerCheckerRequestManager
      *
      * @return \Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface
      */
-    public function approve(MakerCheckerRequestInterface $request, Model $approver, ?string $remarks): MakerCheckerRequestInterface
+    public function approve(MakerCheckerRequestInterface $request, Model $approver, ?string $remarks = null): MakerCheckerRequestInterface
     {
         if (! $request instanceof Model) {
             throw new Exception('Request class must extend the base Eloquent model class.');
@@ -129,10 +129,6 @@ class MakerCheckerRequestManager
             $this->executeCallbackHook($request, Hooks::POST_APPROVAL); //TODO: do this inside a job instead.
 
             $this->app['events']->dispatch(new RequestApproved($request));
-
-            return $request;
-
-            //TODO: Call the general event for post approval
         } catch (\Throwable $e) {
             DB::rollBack();
 
@@ -152,6 +148,8 @@ class MakerCheckerRequestManager
             }
 
             $this->app['events']->dispatch(new RequestFailed($request, $e));
+        } finally {
+            return $request;
         }
     }
 
@@ -164,7 +162,7 @@ class MakerCheckerRequestManager
      *
      * @return \Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface
      */
-    public function reject(MakerCheckerRequestInterface $request, Model $rejector, ?string $remarks): MakerCheckerRequestInterface
+    public function reject(MakerCheckerRequestInterface $request, Model $rejector, ?string $remarks = null): MakerCheckerRequestInterface
     {
         if (! $request instanceof Model) {
             throw new Exception('Request class must extend the base Eloquent model class.');
@@ -252,7 +250,7 @@ class MakerCheckerRequestManager
     private function fulfillRequest(MakerCheckerRequestInterface $request): void
     {
         if ($request->isOfType(RequestTypes::CREATE)) {
-            $subjectClass = $request->subject_class;
+            $subjectClass = $request->subject_type;
 
             $subjectClass::create($request->payload);
         } elseif ($request->isOfType(RequestTypes::UPDATE)) {
