@@ -44,7 +44,7 @@ class RequestBuilder
      *
      * @param string $description
      *
-     * @return self
+     * @return \Prismaticode\MakerChecker\RequestBuilder
      */
     public function description(string $description): self
     {
@@ -59,7 +59,7 @@ class RequestBuilder
      *
      * @param ...$uniqueIdentifiers
      *
-     * @return self
+     * @return \Prismaticode\MakerChecker\RequestBuilder
      */
     public function uniqueBy(...$uniqueIdentifiers): self //TODO: Note that it is only useful for MysQL, Postgres and SQLite 3.3.9+
     {
@@ -73,7 +73,7 @@ class RequestBuilder
      *
      * @param \Illuminate\Database\Eloquent\Model $maker
      *
-     * @return self
+     * @return \Prismaticode\MakerChecker\RequestBuilder
      */
     public function madeBy(Model $maker): self
     {
@@ -108,7 +108,7 @@ class RequestBuilder
      * @param string $model
      * @param array $payload
      *
-     * @return self
+     * @return \Prismaticode\MakerChecker\RequestBuilder
      */
     public function toCreate(string $model, array $payload = []): self
     {
@@ -131,7 +131,7 @@ class RequestBuilder
      * @param \Illuminate\Database\Eloquent\Model $modelToUpdate
      * @param array $requestedChanges
      *
-     * @return self
+     * @return \Prismaticode\MakerChecker\RequestBuilder
      */
     public function toUpdate(Model $modelToUpdate, array $requestedChanges): self
     {
@@ -149,7 +149,7 @@ class RequestBuilder
      *
      * @param \Illuminate\Database\Eloquent\Model $modelToDelete
      *
-     * @return self
+     * @return \Prismaticode\MakerChecker\RequestBuilder
      */
     public function toDelete(Model $modelToDelete): self
     {
@@ -173,7 +173,7 @@ class RequestBuilder
      *
      * @param \Closure $callback
      *
-     * @return self
+     * @return \Prismaticode\MakerChecker\RequestBuilder
      */
     public function beforeApproval(Closure $callback): self
     {
@@ -187,7 +187,7 @@ class RequestBuilder
      *
      * @param \Closure $callback
      *
-     * @return self
+     * @return \Prismaticode\MakerChecker\RequestBuilder
      */
     public function afterApproval(Closure $callback): self
     {
@@ -201,7 +201,7 @@ class RequestBuilder
      *
      * @param \Closure $callback
      *
-     * @return self
+     * @return \Prismaticode\MakerChecker\RequestBuilder
      */
     public function beforeRejection(Closure $callback): self
     {
@@ -215,7 +215,7 @@ class RequestBuilder
      *
      * @param \Closure $callback
      *
-     * @return self
+     * @return \Prismaticode\MakerChecker\RequestBuilder
      */
     public function afterRejection(Closure $callback): self
     {
@@ -229,7 +229,7 @@ class RequestBuilder
      *
      * @param \Closure $callback
      *
-     * @return self
+     * @return \Prismaticode\MakerChecker\RequestBuilder
      */
     public function onFailure(Closure $callback): self
     {
