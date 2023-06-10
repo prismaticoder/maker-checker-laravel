@@ -18,6 +18,7 @@ use Prismaticode\MakerChecker\Events\RequestInitiated;
 use Prismaticode\MakerChecker\Events\RequestRejected;
 use Prismaticode\MakerChecker\Exceptions\InvalidRequestTypePassed;
 use Prismaticode\MakerChecker\Exceptions\ModelCannotCheckRequests;
+use Prismaticode\MakerChecker\Exceptions\RequestCannotBeChecked;
 
 class MakerCheckerRequestManager
 {
@@ -215,17 +216,17 @@ class MakerCheckerRequestManager
         $this->assertModelCanCheckRequests($checker);
 
         if (! $request->isOfStatus(RequestStatuses::PENDING)) {
-            throw new Exception('Cannot act on a non-pending request');
+            throw RequestCannotBeChecked::create('Cannot act on a non-pending request.');
         }
 
         $requestExpirationInMinutes = data_get($this->configData, 'request_expiration_in_minutes');
 
         if ($requestExpirationInMinutes && Carbon::now()->diff($request->created_at) > $requestExpirationInMinutes) {
-            throw new Exception('The request cannot be acted upon as it has expired.');
+            throw RequestCannotBeChecked::create('Expired request.');
         }
 
         if ($checker->is($request->maker)) {
-            throw new Exception('Request checker cannot be the same as the maker.');
+            throw RequestCannotBeChecked::create('Request checker cannot be the same as the maker.');
         }
     }
 
