@@ -144,7 +144,7 @@ class MakerCheckerRequestManager
             $onFailureCallBack = $this->getHook($request, Hooks::ON_FAILURE);
 
             if ($onFailureCallBack) {
-                $onFailureCallBack($e);
+                $onFailureCallBack($request, $e);
             }
 
             $this->app['events']->dispatch(new RequestFailed($request, $e));
@@ -203,7 +203,7 @@ class MakerCheckerRequestManager
             $onFailureCallBack = $this->getHook($request, Hooks::ON_FAILURE);
 
             if ($onFailureCallBack) {
-                $onFailureCallBack($e);
+                $onFailureCallBack($request, $e);
             }
 
             $this->app['events']->dispatch(new RequestFailed($request, $e));
