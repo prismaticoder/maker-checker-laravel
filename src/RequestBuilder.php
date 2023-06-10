@@ -59,9 +59,9 @@ class RequestBuilder
      *
      * @param ...$uniqueIdentifiers
      *
-     * @return void
+     * @return self
      */
-    public function uniqueBy(...$uniqueIdentifiers) //TODO: Note that it is only useful for MysQL, Postgres and SQLite 3.3.9+
+    public function uniqueBy(...$uniqueIdentifiers): self //TODO: Note that it is only useful for MysQL, Postgres and SQLite 3.3.9+
     {
         $this->uniqueIdentifiers = $uniqueIdentifiers;
 
@@ -313,10 +313,10 @@ class RequestBuilder
             ->where('subject_type', $request->subject_type)
             ->where('subject_id', $request->subject_id);
 
-        if (empty($this->uniqueIdentifiers) || empty(Arr::pluck($request->payload, $this->uniqueIdentifiers))) {
+        if (empty($this->uniqueIdentifiers) || empty(Arr::only($request->payload, $this->uniqueIdentifiers))) {
             $baseQuery->where('payload', json_encode($request->payload));
         } else {
-            $uniqueValues = Arr::pluck($request->payload, $this->uniqueIdentifiers);
+            $uniqueValues = Arr::only($request->payload, $this->uniqueIdentifiers);
 
             foreach ($uniqueValues as $key => $value) {
                 $baseQuery->where("payload->{$key}", $value);
