@@ -2,6 +2,7 @@
 
 namespace Prismaticode\MakerChecker;
 
+use App\Console\Commands\ExpireOverduePendingRequests;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
@@ -11,6 +12,10 @@ class MakerCheckerServiceProvider extends ServiceProvider
     public function boot()
     {
         AboutCommand::add('Maker Checker Laravel', ['Author' => 'Prismaticode', 'Version' => '1.0.0']); //flex
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([ExpireOverduePendingRequests::class]);
+        }
 
         $this->publishes([
             __DIR__.'/../config/makerchecker.php' => config_path('makerchecker.php'),
