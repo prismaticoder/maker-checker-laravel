@@ -3,7 +3,6 @@
 namespace Prismaticode\MakerChecker\Tests;
 
 use Carbon\Carbon;
-use Exception;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
@@ -193,7 +192,7 @@ class MakerCheckerFacadeTest extends TestCase
             'code' => $request->code,
             'status' => RequestStatuses::APPROVED,
             'checker_type' => $this->checkingUser->getMorphClass(),
-            'checker_id' => $this->checkingUser->getKey()
+            'checker_id' => $this->checkingUser->getKey(),
         ]);
 
         $this->assertDatabaseHas('articles', [
@@ -222,7 +221,7 @@ class MakerCheckerFacadeTest extends TestCase
             'code' => $request->code,
             'status' => RequestStatuses::APPROVED,
             'checker_type' => $this->checkingUser->getMorphClass(),
-            'checker_id' => $this->checkingUser->getKey()
+            'checker_id' => $this->checkingUser->getKey(),
         ]);
 
         $this->assertDatabaseHas('articles', [
@@ -248,7 +247,7 @@ class MakerCheckerFacadeTest extends TestCase
             'code' => $request->code,
             'status' => RequestStatuses::REJECTED,
             'checker_type' => $this->checkingUser->getMorphClass(),
-            'checker_id' => $this->checkingUser->getKey()
+            'checker_id' => $this->checkingUser->getKey(),
         ]);
 
         $this->assertDatabaseMissing('articles', [
@@ -294,7 +293,7 @@ class MakerCheckerFacadeTest extends TestCase
         $request = $this->makingUser->requestToCreate(Article::class, $payload)->save();
 
         $this->expectException(RequestCannotBeChecked::class);
-        
+
         $this->makingUser->approve($request);
     }
 
@@ -307,7 +306,7 @@ class MakerCheckerFacadeTest extends TestCase
 
         $this->expectException(RequestCannotBeChecked::class);
 
-        $this->checkingUser->approve($request)
+        $this->checkingUser->approve($request);
     }
 
     public function testItCannotAllowAnExpiredRequestToBeCheckedIfExpiryIsSet()
@@ -397,7 +396,7 @@ class MakerCheckerFacadeTest extends TestCase
         $article = $this->createTestArticle();
         $newTitle = $this->faker->word();
 
-        $this->makingUser->requestToUpdate($article, ['title' => $newTitle])->save();
+        $request = $this->makingUser->requestToUpdate($article, ['title' => $newTitle])->save();
 
         Event::fake();
 
@@ -407,7 +406,7 @@ class MakerCheckerFacadeTest extends TestCase
             'code' => $request->code,
             'status' => RequestStatuses::APPROVED,
             'checker_type' => $this->checkingUser->getMorphClass(),
-            'checker_id' => $this->checkingUser->getKey()
+            'checker_id' => $this->checkingUser->getKey(),
         ]);
 
         $this->assertDatabaseHas('articles', [
@@ -433,7 +432,7 @@ class MakerCheckerFacadeTest extends TestCase
             'code' => $request->code,
             'status' => RequestStatuses::REJECTED,
             'checker_type' => $this->checkingUser->getMorphClass(),
-            'checker_id' => $this->checkingUser->getKey()
+            'checker_id' => $this->checkingUser->getKey(),
         ]);
 
         $this->assertDatabaseMissing('articles', [
@@ -458,7 +457,7 @@ class MakerCheckerFacadeTest extends TestCase
             'code' => $request->code,
             'status' => RequestStatuses::APPROVED,
             'checker_type' => $this->checkingUser->getMorphClass(),
-            'checker_id' => $this->checkingUser->getKey()
+            'checker_id' => $this->checkingUser->getKey(),
         ]);
 
         $this->assertDatabaseMissing('articles', [
@@ -482,7 +481,7 @@ class MakerCheckerFacadeTest extends TestCase
             'code' => $request->code,
             'status' => RequestStatuses::REJECTED,
             'checker_type' => $this->checkingUser->getMorphClass(),
-            'checker_id' => $this->checkingUser->getKey()
+            'checker_id' => $this->checkingUser->getKey(),
         ]);
 
         $this->assertDatabaseHas('articles', [
