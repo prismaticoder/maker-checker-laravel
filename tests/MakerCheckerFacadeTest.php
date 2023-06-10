@@ -47,7 +47,7 @@ class MakerCheckerFacadeTest extends TestCase
         Event::assertDispatched(RequestInitiated::class);
     }
 
-    public function testItThrowsAnExceptionWhenTryingToCreateARequestThatAlreadyExists()
+    public function testItThrowsAnExceptionWhenTryingToCreateARequestThatAlreadyExistsIfConfigIsSet()
     {
         $this->app['config']->set('makerchecker.ensure_requests_are_unique', true);
 
@@ -60,6 +60,63 @@ class MakerCheckerFacadeTest extends TestCase
         $this->expectException(DuplicateRequestException::class);
 
         MakerChecker::request()->toCreate(User::class, $payload)->madeBy($this->makingUser)->save();
+    }
+
+    public function testItDoesNotThrowAnExceptionWhenTryingToCreateARequestThatAlreadyExistsIfConfigIsNotSet()
+    {
+        $this->app['config']->set('makerchecker.ensure_requests_are_unique', false);
+
+        $payload = $this->getArticleCreationPayload();
+
+        MakerChecker::request()->toCreate(User::class, $payload)->madeBy($this->makingUser)->save();
+
+        Event::fake();
+
+        MakerChecker::request()->toCreate(User::class, $payload)->madeBy($this->makingUser)->save();
+
+        Event::assertDispatched(RequestInitiated::class);
+    }
+
+    public function testItChecksForUniquenessBySpecifiedFieldsWhenTryingToMakeRequests()
+    {
+        $this->app['config']->set('makerchecker.ensure_requests_are_unique', true);
+
+        $payload = $this->getArticleCreationPayload();
+
+        MakerChecker::request()->toCreate(User::class, $payload)->madeBy($this->makingUser)->save();
+
+        $secondPayload = $payload;
+        $secondPayload['description'] = 'adifferentdescription';
+
+        $this->expectException(DuplicateRequestException::class);
+
+        MakerChecker::request()
+            ->toCreate(User::class, $secondPayload)
+            ->madeBy($this->makingUser)
+            ->uniqueBy('title')
+            ->save();
+    }
+
+    public function testItAllowsRequestsToBeInitiatedIfOtherNonUniqueFieldsArePassedForUniqueness()
+    {
+        $this->app['config']->set('makerchecker.ensure_requests_are_unique', true);
+
+        $payload = $this->getArticleCreationPayload();
+
+        MakerChecker::request()->toCreate(User::class, $payload)->madeBy($this->makingUser)->save();
+
+        $secondPayload = $payload;
+        $secondPayload['description'] = 'adifferentdescription';
+
+        Event::fake();
+
+        MakerChecker::request()
+            ->toCreate(User::class, $secondPayload)
+            ->madeBy($this->makingUser)
+            ->uniqueBy('description')
+            ->save();
+
+        Event::assertDispatched(RequestInitiated::class);
     }
 
     public function testItThrowsAnExceptionIfTheRequestingModelIsNotWhitelistedToMakeRequests()
@@ -229,6 +286,36 @@ class MakerCheckerFacadeTest extends TestCase
         Event::assertDispatched(RequestRejected::class);
     }
 
+    public function testItExecutesTheProvidedCallbackWhenARequestIsRejected()
+    {
+        $payload = $this->getArticleCreationPayload();
+        $request = MakerChecker::request()
+            ->toCreate(Article::class, $payload)
+            ->madeBy($this->makingUser)
+            ->afterRejection(fn ($request) => Cache::set('rejected_request', $request->code))
+            ->save();
+
+        Event::fake();
+
+        $this->assertNull(Cache::get('rejected_request'));
+
+        MakerChecker::reject($request, $this->checkingUser);
+
+        $this->assertDatabaseHas('maker_checker_requests', [
+            'code' => $request->code,
+            'status' => RequestStatuses::REJECTED,
+        ]);
+
+        $this->assertDatabaseMissing('articles', [
+            'title' => $payload['title'],
+            'description' => $payload['description'],
+        ]);
+
+        $this->assertEquals(Cache::get('rejected_request'), $request->code);
+
+        Event::assertDispatched(RequestRejected::class);
+    }
+
     public function testItDoesNotAllowTheRequestMakerToBeTheRequestChecker()
     {
         $payload = $this->getArticleCreationPayload();
@@ -313,6 +400,35 @@ class MakerCheckerFacadeTest extends TestCase
         ]);
 
         $this->assertNotNull($request->fresh()->exception);
+
+        Event::assertDispatched(RequestFailed::class);
+    }
+
+    public function testItExecutesTheProvidedCallbackWhenARequestFails()
+    {
+        Event::fake();
+
+        $payload = $this->getArticleCreationPayload();
+        $payload['non_existent_field'] = 'field'; //add a nonexistent field to be included in the create query
+
+        $request = MakerChecker::request()
+            ->toCreate(Article::class, $payload)
+            ->madeBy($this->makingUser)
+            ->onFailure(fn ($request, $e) => Cache::set('failed_request', $request->code))
+            ->save();
+
+        $this->assertNull(Cache::get('failed_request'));
+
+        MakerChecker::approve($request, $this->checkingUser);
+
+        $this->assertDatabaseHas('maker_checker_requests', [
+            'code' => $request->code,
+            'status' => RequestStatuses::FAILED,
+        ]);
+
+        $this->assertNotNull($request->fresh()->exception);
+
+        $this->assertEquals(Cache::get('failed_request'), $request->code);
 
         Event::assertDispatched(RequestFailed::class);
     }
