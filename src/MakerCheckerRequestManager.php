@@ -221,7 +221,7 @@ class MakerCheckerRequestManager
 
         $requestExpirationInMinutes = data_get($this->configData, 'request_expiration_in_minutes');
 
-        if ($requestExpirationInMinutes && Carbon::now()->diff($request->created_at) > $requestExpirationInMinutes) {
+        if ($requestExpirationInMinutes && Carbon::now()->diffInMinutes($request->created_at) > $requestExpirationInMinutes) {
             throw RequestCannotBeChecked::create('Expired request.');
         }
 
