@@ -7,7 +7,6 @@ use Closure;
 use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 use Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface;
 use Prismaticode\MakerChecker\Enums\Hooks;
 use Prismaticode\MakerChecker\Enums\RequestStatuses;
@@ -19,6 +18,7 @@ use Prismaticode\MakerChecker\Events\RequestRejected;
 use Prismaticode\MakerChecker\Exceptions\InvalidRequestTypePassed;
 use Prismaticode\MakerChecker\Exceptions\ModelCannotCheckRequests;
 use Prismaticode\MakerChecker\Exceptions\RequestCannotBeChecked;
+use Prismaticode\MakerChecker\Exceptions\RequestCouldNotBeProcessed;
 
 class MakerCheckerRequestManager
 {
@@ -107,39 +107,22 @@ class MakerCheckerRequestManager
 
         $this->assertRequestCanBeChecked($request, $approver);
 
-        $request->update(['status' => RequestStatuses::PROCESSING]);
+        $request->update([
+            'status' => RequestStatuses::APPROVED,
+            'checker_type' => $approver->getMorphClass(),
+            'checker_id' => $approver->getKey(),
+            'checked_at' => Carbon::now(),
+            'remarks' => $remarks,
+        ]);
 
         try {
             $this->executeCallbackHook($request, Hooks::PRE_APPROVAL);
 
-            //TODO: put the below in a job instead. This will be useful when it comes to executing generic actions.
-            DB::beginTransaction();
-
             $this->fulfillRequest($request);
-
-            $request->update([
-                'status' => RequestStatuses::APPROVED,
-                'checker_type' => $approver->getMorphClass(),
-                'checker_id' => $approver->getKey(),
-                'checked_at' => Carbon::now(),
-                'remarks' => $remarks,
-            ]);
-
-            DB::commit();
-
-            $this->executeCallbackHook($request, Hooks::POST_APPROVAL); //TODO: do this inside a job instead.
-
-            $this->app['events']->dispatch(new RequestApproved($request));
         } catch (\Throwable $e) {
-            DB::rollBack();
-
             $request->update([
                 'status' => RequestStatuses::FAILED,
-                'exception' => $e->getTraceAsString(),
-                'checker_type' => $approver->getMorphClass(),
-                'checker_id' => $approver->getKey(),
-                'checked_at' => Carbon::now(),
-                'remarks' => $remarks,
+                'exception' => (string) $e,
             ]);
 
             $onFailureCallBack = $this->getHook($request, Hooks::ON_FAILURE);
@@ -149,7 +132,13 @@ class MakerCheckerRequestManager
             }
 
             $this->app['events']->dispatch(new RequestFailed($request, $e));
+
+            throw RequestCouldNotBeProcessed::create($e->getMessage(), $e);
         } finally {
+            $this->executeCallbackHook($request, Hooks::POST_APPROVAL);
+
+            $this->app['events']->dispatch(new RequestApproved($request));
+
             return $request;
         }
     }
@@ -171,34 +160,20 @@ class MakerCheckerRequestManager
 
         $this->assertRequestCanBeChecked($request, $rejector);
 
-        $request->update(['status' => RequestStatuses::PROCESSING]);
+        $request->update([
+            'status' => RequestStatuses::REJECTED,
+            'checker_type' => $rejector->getMorphClass(),
+            'checker_id' => $rejector->getKey(),
+            'checked_at' => Carbon::now(),
+            'remarks' => $remarks,
+        ]);
 
         try {
             $this->executeCallbackHook($request, Hooks::PRE_REJECTION);
-
-            //TODO: put the below in a job instead. This will be useful when it comes to executing generic actions.
-
-            $request->update([
-                'status' => RequestStatuses::REJECTED,
-                'checker_type' => $rejector->getMorphClass(),
-                'checker_id' => $rejector->getKey(),
-                'checked_at' => Carbon::now(),
-                'remarks' => $remarks,
-            ]);
-
-            $this->executeCallbackHook($request, Hooks::POST_REJECTION); //TODO: do this inside a job instead.
-
-            $this->app['events']->dispatch(new RequestRejected($request));
-
-            return $request;
         } catch (\Throwable $e) {
             $request->update([
                 'status' => RequestStatuses::FAILED,
-                'exception' => $e->getTraceAsString(),
-                'checker_type' => $rejector->getMorphClass(),
-                'checker_id' => $rejector->getKey(),
-                'checked_at' => Carbon::now(),
-                'remarks' => $remarks,
+                'exception' => (string) $e,
             ]);
 
             $onFailureCallBack = $this->getHook($request, Hooks::ON_FAILURE);
@@ -208,6 +183,14 @@ class MakerCheckerRequestManager
             }
 
             $this->app['events']->dispatch(new RequestFailed($request, $e));
+
+            throw RequestCouldNotBeProcessed::create($e->getMessage(), $e);
+        } finally {
+            $this->executeCallbackHook($request, Hooks::POST_REJECTION);
+
+            $this->app['events']->dispatch(new RequestRejected($request));
+
+            return $request;
         }
     }
 
