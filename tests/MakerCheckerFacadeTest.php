@@ -16,6 +16,7 @@ use Prismaticode\MakerChecker\Events\RequestRejected;
 use Prismaticode\MakerChecker\Exceptions\DuplicateRequestException;
 use Prismaticode\MakerChecker\Exceptions\ModelCannotCheckRequests;
 use Prismaticode\MakerChecker\Exceptions\ModelCannotMakeRequests;
+use Prismaticode\MakerChecker\Exceptions\RequestCannotBeChecked;
 use Prismaticode\MakerChecker\Facades\MakerChecker;
 use Prismaticode\MakerChecker\Tests\Models\Article;
 use Prismaticode\MakerChecker\Tests\Models\User;
@@ -30,10 +31,7 @@ class MakerCheckerFacadeTest extends TestCase
 
         $articleCreationPayload = $this->getArticleCreationPayload();
 
-        MakerChecker::request()
-            ->toCreate(Article::class, $articleCreationPayload)
-            ->madeBy($this->makingUser)
-            ->save();
+        $this->makingUser->requestToCreate(Article::class, $articleCreationPayload)->save();
 
         $this->assertDatabaseHas('maker_checker_requests', [
             'subject_type' => Article::class,
@@ -51,28 +49,26 @@ class MakerCheckerFacadeTest extends TestCase
     {
         $this->app['config']->set('makerchecker.ensure_requests_are_unique', true);
 
-        $payload = $this->getArticleCreationPayload();
+        $articleCreationPayload = $this->getArticleCreationPayload();
 
-        MakerChecker::request()->toCreate(User::class, $payload)->madeBy($this->makingUser)->save();
-
-        Event::fake();
+        $this->makingUser->requestToCreate(Article::class, $articleCreationPayload)->save();
 
         $this->expectException(DuplicateRequestException::class);
 
-        MakerChecker::request()->toCreate(User::class, $payload)->madeBy($this->makingUser)->save();
+        $this->makingUser->requestToCreate(Article::class, $articleCreationPayload)->save();
     }
 
     public function testItDoesNotThrowAnExceptionWhenTryingToCreateARequestThatAlreadyExistsIfConfigIsNotSet()
     {
         $this->app['config']->set('makerchecker.ensure_requests_are_unique', false);
 
-        $payload = $this->getArticleCreationPayload();
+        $articleCreationPayload = $this->getArticleCreationPayload();
 
-        MakerChecker::request()->toCreate(User::class, $payload)->madeBy($this->makingUser)->save();
+        $this->makingUser->requestToCreate(Article::class, $articleCreationPayload)->save();
 
         Event::fake();
 
-        MakerChecker::request()->toCreate(User::class, $payload)->madeBy($this->makingUser)->save();
+        $this->makingUser->requestToCreate(Article::class, $articleCreationPayload)->save();
 
         Event::assertDispatched(RequestInitiated::class);
     }
@@ -81,18 +77,17 @@ class MakerCheckerFacadeTest extends TestCase
     {
         $this->app['config']->set('makerchecker.ensure_requests_are_unique', true);
 
-        $payload = $this->getArticleCreationPayload();
+        $articleCreationPayload = $this->getArticleCreationPayload();
 
-        MakerChecker::request()->toCreate(User::class, $payload)->madeBy($this->makingUser)->save();
+        $this->makingUser->requestToCreate(Article::class, $articleCreationPayload)->save();
 
-        $secondPayload = $payload;
-        $secondPayload['description'] = 'adifferentdescription';
+        $anotherRequestPayload = $articleCreationPayload;
+        $anotherRequestPayload['description'] = 'a_different_description';
 
         $this->expectException(DuplicateRequestException::class);
 
-        MakerChecker::request()
-            ->toCreate(User::class, $secondPayload)
-            ->madeBy($this->makingUser)
+        $this->makingUser
+            ->requestToCreate(Article::class, $anotherRequestPayload)
             ->uniqueBy('title')
             ->save();
     }
@@ -101,18 +96,17 @@ class MakerCheckerFacadeTest extends TestCase
     {
         $this->app['config']->set('makerchecker.ensure_requests_are_unique', true);
 
-        $payload = $this->getArticleCreationPayload();
+        $articleCreationPayload = $this->getArticleCreationPayload();
 
-        MakerChecker::request()->toCreate(User::class, $payload)->madeBy($this->makingUser)->save();
+        $this->makingUser->requestToCreate(Article::class, $articleCreationPayload)->save();
 
-        $secondPayload = $payload;
-        $secondPayload['description'] = 'adifferentdescription';
+        $anotherRequestPayload = $articleCreationPayload;
+        $anotherRequestPayload['description'] = 'a_different_description';
 
         Event::fake();
 
-        MakerChecker::request()
-            ->toCreate(User::class, $secondPayload)
-            ->madeBy($this->makingUser)
+        $this->makingUser
+            ->requestToCreate(Article::class, $anotherRequestPayload)
             ->uniqueBy('description')
             ->save();
 
@@ -139,19 +133,11 @@ class MakerCheckerFacadeTest extends TestCase
             Cache::set('initiated_request_code', $event->request->code);
         });
 
-        $request = MakerChecker::request()
-            ->toCreate(Article::class, $articleCreationPayload)
-            ->madeBy($this->makingUser)
-            ->save();
+        $this->assertNull(Cache::get('initiated_request_code'));
 
-        $this->assertDatabaseHas('maker_checker_requests', [
-            'subject_type' => Article::class,
-            'subject_id' => null,
-            'request_type' => RequestTypes::CREATE,
-            'status' => RequestStatuses::PENDING,
-            'payload->title' => $articleCreationPayload['title'],
-            'payload->description' => $articleCreationPayload['description'],
-        ]);
+        $request = $this->makingUser->requestToCreate(Article::class, $articleCreationPayload)->save();
+
+        $this->assertDatabaseHas('maker_checker_requests', ['code' => $request->code]);
 
         $this->assertEquals(Cache::get('initiated_request_code'), $request->code);
     }
@@ -163,7 +149,7 @@ class MakerCheckerFacadeTest extends TestCase
 
         Event::fake();
 
-        MakerChecker::request()->toUpdate($article, ['title' => $newTitle])->madeBy($this->makingUser)->save();
+        $this->makingUser->requestToUpdate($article, ['title' => $newTitle])->save();
 
         $this->assertDatabaseHas('maker_checker_requests', [
             'subject_type' => $article->getMorphClass(),
@@ -182,7 +168,7 @@ class MakerCheckerFacadeTest extends TestCase
 
         Event::fake();
 
-        MakerChecker::request()->toDelete($article)->madeBy($this->makingUser)->save();
+        $this->makingUser->requestToDelete($article)->save();
 
         $this->assertDatabaseHas('maker_checker_requests', [
             'subject_type' => $article->getMorphClass(),
@@ -197,22 +183,17 @@ class MakerCheckerFacadeTest extends TestCase
     public function testItCreatesTheRequestedEntryWhenACreateRequestIsApproved()
     {
         $payload = $this->getArticleCreationPayload();
-        $request = MakerChecker::request()
-            ->toCreate(Article::class, $payload)
-            ->madeBy($this->makingUser)
-            ->save();
+        $request = $this->makingUser->requestToCreate(Article::class, $payload)->save();
 
         Event::fake();
 
-        MakerChecker::approve($request, $this->checkingUser);
+        $this->checkingUser->approve($request);
 
         $this->assertDatabaseHas('maker_checker_requests', [
-            'subject_type' => Article::class,
-            'subject_id' => null,
-            'request_type' => RequestTypes::CREATE,
+            'code' => $request->code,
             'status' => RequestStatuses::APPROVED,
-            'payload->title' => $payload['title'],
-            'payload->description' => $payload['description'],
+            'checker_type' => $this->checkingUser->getMorphClass(),
+            'checker_id' => $this->checkingUser->getKey()
         ]);
 
         $this->assertDatabaseHas('articles', [
@@ -226,9 +207,8 @@ class MakerCheckerFacadeTest extends TestCase
     public function testItExecutesTheProvidedCallbackWhenARequestIsApproved()
     {
         $payload = $this->getArticleCreationPayload();
-        $request = MakerChecker::request()
-            ->toCreate(Article::class, $payload)
-            ->madeBy($this->makingUser)
+        $request = $this->makingUser
+            ->requestToCreate(Article::class, $payload)
             ->afterApproval(fn ($request) => Cache::set('approved_request', $request->code))
             ->save();
 
@@ -236,15 +216,13 @@ class MakerCheckerFacadeTest extends TestCase
 
         $this->assertNull(Cache::get('approved_request'));
 
-        MakerChecker::approve($request, $this->checkingUser);
+        $this->checkingUser->approve($request);
 
         $this->assertDatabaseHas('maker_checker_requests', [
-            'subject_type' => Article::class,
-            'subject_id' => null,
-            'request_type' => RequestTypes::CREATE,
+            'code' => $request->code,
             'status' => RequestStatuses::APPROVED,
-            'payload->title' => $payload['title'],
-            'payload->description' => $payload['description'],
+            'checker_type' => $this->checkingUser->getMorphClass(),
+            'checker_id' => $this->checkingUser->getKey()
         ]);
 
         $this->assertDatabaseHas('articles', [
@@ -260,22 +238,17 @@ class MakerCheckerFacadeTest extends TestCase
     public function testItDoesNotCreateTheRequestedEntryWhenACreateRequestIsRejected()
     {
         $payload = $this->getArticleCreationPayload();
-        $request = MakerChecker::request()
-            ->toCreate(Article::class, $payload)
-            ->madeBy($this->makingUser)
-            ->save();
+        $request = $this->makingUser->requestToCreate(Article::class, $payload)->save();
 
         Event::fake();
 
-        MakerChecker::reject($request, $this->checkingUser);
+        $this->checkingUser->reject($request);
 
         $this->assertDatabaseHas('maker_checker_requests', [
-            'subject_type' => Article::class,
-            'subject_id' => null,
-            'request_type' => RequestTypes::CREATE,
+            'code' => $request->code,
             'status' => RequestStatuses::REJECTED,
-            'payload->title' => $payload['title'],
-            'payload->description' => $payload['description'],
+            'checker_type' => $this->checkingUser->getMorphClass(),
+            'checker_id' => $this->checkingUser->getKey()
         ]);
 
         $this->assertDatabaseMissing('articles', [
@@ -289,9 +262,8 @@ class MakerCheckerFacadeTest extends TestCase
     public function testItExecutesTheProvidedCallbackWhenARequestIsRejected()
     {
         $payload = $this->getArticleCreationPayload();
-        $request = MakerChecker::request()
-            ->toCreate(Article::class, $payload)
-            ->madeBy($this->makingUser)
+        $request = $this->makingUser
+            ->requestToCreate(Article::class, $payload)
             ->afterRejection(fn ($request) => Cache::set('rejected_request', $request->code))
             ->save();
 
@@ -299,7 +271,7 @@ class MakerCheckerFacadeTest extends TestCase
 
         $this->assertNull(Cache::get('rejected_request'));
 
-        MakerChecker::reject($request, $this->checkingUser);
+        $this->checkingUser->reject($request);
 
         $this->assertDatabaseHas('maker_checker_requests', [
             'code' => $request->code,
@@ -319,29 +291,23 @@ class MakerCheckerFacadeTest extends TestCase
     public function testItDoesNotAllowTheRequestMakerToBeTheRequestChecker()
     {
         $payload = $this->getArticleCreationPayload();
-        $request = MakerChecker::request()
-            ->toCreate(Article::class, $payload)
-            ->madeBy($this->makingUser)
-            ->save();
+        $request = $this->makingUser->requestToCreate(Article::class, $payload)->save();
 
-        $this->expectException(Exception::class);
-
-        MakerChecker::approve($request, $this->makingUser);
+        $this->expectException(RequestCannotBeChecked::class);
+        
+        $this->makingUser->approve($request);
     }
 
     public function testItCannotAllowANonPendingRequestToBeChecked()
     {
         $payload = $this->getArticleCreationPayload();
-        $request = MakerChecker::request()
-            ->toCreate(Article::class, $payload)
-            ->madeBy($this->makingUser)
-            ->save();
+        $request = $this->makingUser->requestToCreate(Article::class, $payload)->save();
 
         $request->update(['status' => RequestStatuses::APPROVED]);
 
-        $this->expectException(Exception::class);
+        $this->expectException(RequestCannotBeChecked::class);
 
-        MakerChecker::approve($request, $this->checkingUser);
+        $this->checkingUser->approve($request)
     }
 
     public function testItCannotAllowAnExpiredRequestToBeCheckedIfExpiryIsSet()
@@ -354,16 +320,13 @@ class MakerCheckerFacadeTest extends TestCase
 
         $this->app['config']->set('makerchecker.request_expiration_in_minutes', $expirationInMinutes);
 
-        $request = MakerChecker::request()
-            ->toCreate(Article::class, $payload)
-            ->madeBy($this->makingUser)
-            ->save();
+        $request = $this->makingUser->requestToCreate(Article::class, $payload)->save();
 
         $request->update(['created_at' => Carbon::now()->subMinutes($expirationInMinutes + 1)]);
 
-        $this->expectException(Exception::class);
+        $this->expectException(RequestCannotBeChecked::class);
 
-        MakerChecker::approve($request, $this->checkingUser);
+        $this->checkingUser->approve($request);
     }
 
     public function testItThrowsAnExceptionIfTheCheckerModelIsNotWhitelistedToCheckRequests()
@@ -373,7 +336,7 @@ class MakerCheckerFacadeTest extends TestCase
         $payload = $this->getArticleCreationPayload();
         $article = $this->createTestArticle();
 
-        $request = MakerChecker::request()->toCreate(User::class, $payload)->madeBy($this->makingUser)->save();
+        $request = $this->makingUser->requestToCreate(Article::class, $payload)->save();
 
         $this->expectException(ModelCannotCheckRequests::class);
 
@@ -387,12 +350,9 @@ class MakerCheckerFacadeTest extends TestCase
         $payload = $this->getArticleCreationPayload();
         $payload['non_existent_field'] = 'field'; //add a nonexistent field to be included in the create query
 
-        $request = MakerChecker::request()
-            ->toCreate(Article::class, $payload)
-            ->madeBy($this->makingUser)
-            ->save();
+        $request = $this->makingUser->requestToCreate(Article::class, $payload)->save();
 
-        MakerChecker::approve($request, $this->checkingUser);
+        $this->checkingUser->approve($request);
 
         $this->assertDatabaseHas('maker_checker_requests', [
             'code' => $request->code,
@@ -411,15 +371,14 @@ class MakerCheckerFacadeTest extends TestCase
         $payload = $this->getArticleCreationPayload();
         $payload['non_existent_field'] = 'field'; //add a nonexistent field to be included in the create query
 
-        $request = MakerChecker::request()
-            ->toCreate(Article::class, $payload)
-            ->madeBy($this->makingUser)
+        $request = $this->makingUser
+            ->requestToCreate(Article::class, $payload)
             ->onFailure(fn ($request, $e) => Cache::set('failed_request', $request->code))
             ->save();
 
         $this->assertNull(Cache::get('failed_request'));
 
-        MakerChecker::approve($request, $this->checkingUser);
+        $this->checkingUser->approve($request);
 
         $this->assertDatabaseHas('maker_checker_requests', [
             'code' => $request->code,
@@ -438,21 +397,17 @@ class MakerCheckerFacadeTest extends TestCase
         $article = $this->createTestArticle();
         $newTitle = $this->faker->word();
 
-        //TODO: Move this bit to a private method like requestToCreate/Update etc
-        $request = MakerChecker::request()->toUpdate($article, ['title' => $newTitle])->madeBy($this->makingUser)->save();
-
-        //TODO: assert that the request was initially pending
+        $this->makingUser->requestToUpdate($article, ['title' => $newTitle])->save();
 
         Event::fake();
 
-        MakerChecker::approve($request, $this->checkingUser);
+        $this->checkingUser->approve($request);
 
         $this->assertDatabaseHas('maker_checker_requests', [
-            'subject_type' => $article->getMorphClass(),
-            'subject_id' => $article->getKey(),
-            'request_type' => RequestTypes::UPDATE,
+            'code' => $request->code,
             'status' => RequestStatuses::APPROVED,
-            'payload->title' => $newTitle,
+            'checker_type' => $this->checkingUser->getMorphClass(),
+            'checker_id' => $this->checkingUser->getKey()
         ]);
 
         $this->assertDatabaseHas('articles', [
@@ -468,18 +423,17 @@ class MakerCheckerFacadeTest extends TestCase
         $article = $this->createTestArticle();
         $newTitle = $this->faker->word();
 
-        $request = MakerChecker::request()->toUpdate($article, ['title' => $newTitle])->madeBy($this->makingUser)->save();
+        $request = $this->makingUser->requestToUpdate($article, ['title' => $newTitle])->save();
 
         Event::fake();
 
-        MakerChecker::reject($request, $this->checkingUser);
+        $this->checkingUser->reject($request);
 
         $this->assertDatabaseHas('maker_checker_requests', [
-            'subject_type' => $article->getMorphClass(),
-            'subject_id' => $article->getKey(),
-            'request_type' => RequestTypes::UPDATE,
+            'code' => $request->code,
             'status' => RequestStatuses::REJECTED,
-            'payload->title' => $newTitle,
+            'checker_type' => $this->checkingUser->getMorphClass(),
+            'checker_id' => $this->checkingUser->getKey()
         ]);
 
         $this->assertDatabaseMissing('articles', [
@@ -494,17 +448,17 @@ class MakerCheckerFacadeTest extends TestCase
     {
         $article = $this->createTestArticle();
 
-        $request = MakerChecker::request()->toDelete($article)->madeBy($this->makingUser)->save();
+        $request = $this->makingUser->requestToDelete($article)->save();
 
         Event::fake();
 
-        MakerChecker::approve($request, $this->checkingUser);
+        $this->checkingUser->approve($request);
 
         $this->assertDatabaseHas('maker_checker_requests', [
-            'subject_type' => $article->getMorphClass(),
-            'subject_id' => $article->getKey(),
-            'request_type' => RequestTypes::DELETE,
+            'code' => $request->code,
             'status' => RequestStatuses::APPROVED,
+            'checker_type' => $this->checkingUser->getMorphClass(),
+            'checker_id' => $this->checkingUser->getKey()
         ]);
 
         $this->assertDatabaseMissing('articles', [
@@ -518,17 +472,17 @@ class MakerCheckerFacadeTest extends TestCase
     {
         $article = $this->createTestArticle();
 
-        $request = MakerChecker::request()->toDelete($article)->madeBy($this->makingUser)->save();
+        $request = $this->makingUser->requestToDelete($article)->save();
 
         Event::fake();
 
-        MakerChecker::reject($request, $this->checkingUser);
+        $this->checkingUser->reject($request);
 
         $this->assertDatabaseHas('maker_checker_requests', [
-            'subject_type' => $article->getMorphClass(),
-            'subject_id' => $article->getKey(),
-            'request_type' => RequestTypes::DELETE,
+            'code' => $request->code,
             'status' => RequestStatuses::REJECTED,
+            'checker_type' => $this->checkingUser->getMorphClass(),
+            'checker_id' => $this->checkingUser->getKey()
         ]);
 
         $this->assertDatabaseHas('articles', [
