@@ -20,6 +20,6 @@ trait MakesRequests
 
     public function requestToDelete(Model $modelToDelete): RequestBuilder
     {
-        return MakerChecker::request()->toCreate($modelToDelete)->madeBy($this);
+        return MakerChecker::request()->toDelete($modelToDelete)->madeBy($this);
     }
 }
