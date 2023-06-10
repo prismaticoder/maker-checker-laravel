@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Console\Commands;
+namespace Prismaticode\MakerChecker\Console\Commands;
 
 use Carbon\Carbon;
 use Illuminate\Console\Command;
@@ -44,12 +44,16 @@ class ExpireOverduePendingRequests extends Command
 
         if (! $expirationInMinutes) {
             $this->error('A value needs to be set for the `request_expiration_in_minutes` configuration for this command to be effected');
+
+            return 0;
         }
 
         MakerCheckerRequest::where('status', RequestStatuses::PENDING)
             ->where('created_at', '<=', Carbon::now()->subMinutes($expirationInMinutes))
             ->update(['status' => RequestStatuses::EXPIRED]);
 
-        $this->info('Command executed successfully.');
+        $this->info('Pending requests marked as expired successfully.');
+
+        return 0;
     }
 }

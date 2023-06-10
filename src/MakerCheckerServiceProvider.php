@@ -2,10 +2,10 @@
 
 namespace Prismaticode\MakerChecker;
 
-use App\Console\Commands\ExpireOverduePendingRequests;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
+use Prismaticode\MakerChecker\Console\Commands\ExpireOverduePendingRequests;
 
 class MakerCheckerServiceProvider extends ServiceProvider
 {
