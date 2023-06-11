@@ -308,17 +308,17 @@ class RequestBuilder
      */
     protected function assertRequestIsUnique(MakerCheckerRequest $request): void
     {
-        $baseQuery = MakerCheckerRequest::where('status', RequestStatuses::PENDING)
+        $baseQuery = MakerCheckerRequest::status(RequestStatuses::PENDING)
             ->where('request_type', $request->request_type)
             ->where('subject_type', $request->subject_type)
             ->where('subject_id', $request->subject_id);
 
-        if (empty($this->uniqueIdentifiers) || empty(Arr::only($request->payload, $this->uniqueIdentifiers))) {
-            $baseQuery->where('payload', json_encode($request->payload));
-        } else {
-            $uniqueValues = Arr::only($request->payload, $this->uniqueIdentifiers);
+        $fieldsToCheck = empty($this->uniqueIdentifiers) || empty(Arr::only($request->payload, $this->uniqueIdentifiers))
+            ? $request->payload
+            : Arr::only($request->payload, $this->uniqueIdentifiers);
 
-            foreach ($uniqueValues as $key => $value) {
+        if ($fieldsToCheck) {
+            foreach ($fieldsToCheck as $key => $value) {
                 $baseQuery->where("payload->{$key}", $value);
             }
         }
