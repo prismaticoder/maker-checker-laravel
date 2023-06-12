@@ -1,6 +1,6 @@
-# prismaticode/maker-checker-laravel
+# prismaticoder/maker-checker-laravel
 
-The `prismaticode/maker-checker-laravel` package is a comprehensive Laravel package that provides a flexible and customizable maker-checker system for your application. It allows you to implement an approval workflow for various actions in your application, such as creating, updating, and deleting records. It also allows you to be able to execute random actions. With this package, you can ensure that important actions go through an approval process before they are finalized.
+The `prismaticoder/maker-checker-laravel` package is a comprehensive Laravel package that provides a flexible and customizable maker-checker system for your application. It allows you to implement an approval workflow for various actions in your application, such as creating, updating, and deleting records. It also allows you to be able to execute random actions. With this package, you can ensure that important actions go through an approval process before they are finalized.
 
 ## Features
 
@@ -11,10 +11,10 @@ The `prismaticode/maker-checker-laravel` package is a comprehensive Laravel pack
 
 ## Installation
 
-You can install the `prismaticode/maker-checker-laravel` package via Composer. Run the following command in your terminal:
+You can install the `prismaticoder/maker-checker-laravel` package via Composer. Run the following command in your terminal:
 
 ```bash
-composer require prismaticode/maker-checker-laravel
+composer require prismaticoder/maker-checker-laravel
 ```
 
 ## Configuration
@@ -22,7 +22,7 @@ composer require prismaticode/maker-checker-laravel
 After installing the package, you need to publish the configuration and migration files to customize the maker-checker settings. Run the following command:
 
 ```bash
-php artisan vendor:publish --provider="prismaticode\MakerChecker\MakerCheckerServiceProvider" --tag="config"
+php artisan vendor:publish --provider="prismaticoder\MakerChecker\MakerCheckerServiceProvider" --tag="config"
 ```
 
 This will create a `config/makerchecker.php` file in your application's config as well as a `create_maker_checker_requests_table` migration file in your `database/migrations` folder
@@ -34,7 +34,7 @@ This will create a `config/makerchecker.php` file in your application's config a
 The package exposes a `MakerCheckerRequest` model that can be queried like any other Laravel model
 
 ```php
-use Prismaticode\MakerChecker\Models\MakerCheckerRequest
+use Prismaticoder\MakerChecker\Models\MakerCheckerRequest
 
 MakerCheckerRequest::all(); // Get all requests
 MakerCheckerRequest::status('pending')->get(); // Get all pending requests
@@ -72,7 +72,7 @@ Alternatively, you can choose to include the `MakesRequests` trait in your maker
 
 ```php
 use Illuminate\Database\Eloquent\Model;
-use Prismaticode\MakerChecker\Traits\MakesRequests;
+use Prismaticoder\MakerChecker\Traits\MakesRequests;
 
 class User extends Model
 {
@@ -112,8 +112,8 @@ To initiate a new executable request, you first need to create an executable req
 
 ```php
 use Illuminate\Support\Facades\Http;
-use Prismaticode\MakerChecker\Contracts\ExecutableRequest;
-use Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface;
+use Prismaticoder\MakerChecker\Contracts\ExecutableRequest;
+use Prismaticoder\MakerChecker\Contracts\MakerCheckerRequestInterface;
 
 class InitiatePayment extends ExecutableRequest
 {
@@ -163,7 +163,7 @@ Just like the `MakesRequests` trait, this package also provides a `ChecksRequest
 
 ```php
 use Illuminate\Database\Eloquent\Model;
-use Prismaticode\MakerChecker\Traits\ChecksRequests;
+use Prismaticoder\MakerChecker\Traits\ChecksRequests;
 
 class Admin extends Model
 {
@@ -267,4 +267,4 @@ I'm happy to receive contributions from the community to enhance and improve thi
 
 ## License
 
-The `prismaticode/maker-checker-laravel` package is open-source software licensed under the MIT license. Please refer to the LICENSE file for more information.
+The `prismaticoder/maker-checker-laravel` package is open-source software licensed under the MIT license. Please refer to the LICENSE file for more information.

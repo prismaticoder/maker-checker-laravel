@@ -1,6 +1,6 @@
 <?php
 
-namespace Prismaticode\MakerChecker\Exceptions;
+namespace Prismaticoder\MakerChecker\Exceptions;
 
 use RuntimeException;
 

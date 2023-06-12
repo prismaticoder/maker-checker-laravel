@@ -1,14 +1,14 @@
 <?php
 
-namespace Prismaticode\MakerChecker\Tests;
+namespace Prismaticoder\MakerChecker\Tests;
 
 use CreateMakerCheckerRequestsTable;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Orchestra\Testbench\TestCase as TestbenchTestCase;
-use Prismaticode\MakerChecker\MakerCheckerServiceProvider;
-use Prismaticode\MakerChecker\Tests\Models\Article;
-use Prismaticode\MakerChecker\Tests\Models\User;
+use Prismaticoder\MakerChecker\MakerCheckerServiceProvider;
+use Prismaticoder\MakerChecker\Tests\Models\Article;
+use Prismaticoder\MakerChecker\Tests\Models\User;
 
 abstract class TestCase extends TestbenchTestCase
 {

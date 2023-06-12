@@ -1,23 +1,23 @@
 <?php
 
-namespace Prismaticode\MakerChecker;
+namespace Prismaticoder\MakerChecker;
 
 use Carbon\Carbon;
 use Closure;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
-use Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface;
-use Prismaticode\MakerChecker\Enums\Hooks;
-use Prismaticode\MakerChecker\Enums\RequestStatuses;
-use Prismaticode\MakerChecker\Enums\RequestTypes;
-use Prismaticode\MakerChecker\Events\RequestApproved;
-use Prismaticode\MakerChecker\Events\RequestFailed;
-use Prismaticode\MakerChecker\Events\RequestInitiated;
-use Prismaticode\MakerChecker\Events\RequestRejected;
-use Prismaticode\MakerChecker\Exceptions\InvalidRequestTypePassed;
-use Prismaticode\MakerChecker\Exceptions\ModelCannotCheckRequests;
-use Prismaticode\MakerChecker\Exceptions\RequestCannotBeChecked;
-use Prismaticode\MakerChecker\Exceptions\RequestCouldNotBeProcessed;
+use Prismaticoder\MakerChecker\Contracts\MakerCheckerRequestInterface;
+use Prismaticoder\MakerChecker\Enums\Hooks;
+use Prismaticoder\MakerChecker\Enums\RequestStatuses;
+use Prismaticoder\MakerChecker\Enums\RequestTypes;
+use Prismaticoder\MakerChecker\Events\RequestApproved;
+use Prismaticoder\MakerChecker\Events\RequestFailed;
+use Prismaticoder\MakerChecker\Events\RequestInitiated;
+use Prismaticoder\MakerChecker\Events\RequestRejected;
+use Prismaticoder\MakerChecker\Exceptions\InvalidRequestTypePassed;
+use Prismaticoder\MakerChecker\Exceptions\ModelCannotCheckRequests;
+use Prismaticoder\MakerChecker\Exceptions\RequestCannotBeChecked;
+use Prismaticoder\MakerChecker\Exceptions\RequestCouldNotBeProcessed;
 
 class MakerCheckerRequestManager
 {
@@ -34,7 +34,7 @@ class MakerCheckerRequestManager
     /**
      * Begin initiating a new request.
      *
-     * @return \Prismaticode\MakerChecker\RequestBuilder
+     * @return \Prismaticoder\MakerChecker\RequestBuilder
      */
     public function request(): RequestBuilder
     {
@@ -92,11 +92,11 @@ class MakerCheckerRequestManager
     /**
      * Approve a pending maker-checker request.
      *
-     * @param \Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface $request
+     * @param \Prismaticoder\MakerChecker\Contracts\MakerCheckerRequestInterface $request
      * @param \Illuminate\Database\Eloquent\Model $approver
      * @param string|null $remarks
      *
-     * @return \Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface
+     * @return \Prismaticoder\MakerChecker\Contracts\MakerCheckerRequestInterface
      */
     public function approve(MakerCheckerRequestInterface $request, Model $approver, ?string $remarks = null): MakerCheckerRequestInterface
     {
@@ -141,11 +141,11 @@ class MakerCheckerRequestManager
     /**
      * Reject a pending maker-checker request.
      *
-     * @param \Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface $request
+     * @param \Prismaticoder\MakerChecker\Contracts\MakerCheckerRequestInterface $request
      * @param \Illuminate\Database\Eloquent\Model $rejector
      * @param string|null $remarks
      *
-     * @return \Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface
+     * @return \Prismaticoder\MakerChecker\Contracts\MakerCheckerRequestInterface
      */
     public function reject(MakerCheckerRequestInterface $request, Model $rejector, ?string $remarks = null): MakerCheckerRequestInterface
     {

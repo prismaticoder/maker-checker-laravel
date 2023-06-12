@@ -1,6 +1,6 @@
 <?php
 
-namespace Prismaticode\MakerChecker\Enums;
+namespace Prismaticoder\MakerChecker\Enums;
 
 abstract class RequestStatuses
 {

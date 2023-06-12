@@ -1,11 +1,11 @@
 <?php
 
-namespace Prismaticode\MakerChecker\Tests;
+namespace Prismaticoder\MakerChecker\Tests;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
-use Prismaticode\MakerChecker\Enums\RequestStatuses;
-use Prismaticode\MakerChecker\Tests\Models\Article;
+use Prismaticoder\MakerChecker\Enums\RequestStatuses;
+use Prismaticoder\MakerChecker\Tests\Models\Article;
 
 class ExpireOverdueRequestsCommandTest extends TestCase
 {

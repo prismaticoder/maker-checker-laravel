@@ -1,6 +1,6 @@
 <?php
 
-namespace Prismaticode\MakerChecker\Contracts;
+namespace Prismaticoder\MakerChecker\Contracts;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphTo;

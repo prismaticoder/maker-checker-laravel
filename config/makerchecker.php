@@ -22,7 +22,7 @@ return [
     ],
 
     // The model attached to the table for storing requests.
-    'request_model' => \Prismaticode\MakerChecker\Models\MakerCheckerRequest::class,
+    'request_model' => \Prismaticoder\MakerChecker\Models\MakerCheckerRequest::class,
 
     // The table that will be created by the published migration andthat will be attached to the request model.
     'table_name' => 'maker_checker_requests',

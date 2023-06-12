@@ -1,6 +1,6 @@
 <?php
 
-namespace Prismaticode\MakerChecker\Tests\Models;
+namespace Prismaticoder\MakerChecker\Tests\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;

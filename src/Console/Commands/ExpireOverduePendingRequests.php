@@ -1,11 +1,11 @@
 <?php
 
-namespace Prismaticode\MakerChecker\Console\Commands;
+namespace Prismaticoder\MakerChecker\Console\Commands;
 
 use Carbon\Carbon;
 use Illuminate\Console\Command;
-use Prismaticode\MakerChecker\Enums\RequestStatuses;
-use Prismaticode\MakerChecker\Models\MakerCheckerRequest;
+use Prismaticoder\MakerChecker\Enums\RequestStatuses;
+use Prismaticoder\MakerChecker\Models\MakerCheckerRequest;
 
 class ExpireOverduePendingRequests extends Command
 {

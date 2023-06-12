@@ -1,9 +1,9 @@
 <?php
 
-namespace Prismaticode\MakerChecker\Exceptions;
+namespace Prismaticoder\MakerChecker\Exceptions;
 
 use InvalidArgumentException;
-use Prismaticode\MakerChecker\Enums\RequestTypes;
+use Prismaticoder\MakerChecker\Enums\RequestTypes;
 
 class InvalidRequestTypePassed extends InvalidArgumentException
 {

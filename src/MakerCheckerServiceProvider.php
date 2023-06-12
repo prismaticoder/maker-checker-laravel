@@ -1,20 +1,20 @@
 <?php
 
-namespace Prismaticode\MakerChecker;
+namespace Prismaticoder\MakerChecker;
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
-use Prismaticode\MakerChecker\Console\Commands\ExpireOverduePendingRequests;
-use Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface;
-use Prismaticode\MakerChecker\Exceptions\InvalidRequestModelSet;
+use Prismaticoder\MakerChecker\Console\Commands\ExpireOverduePendingRequests;
+use Prismaticoder\MakerChecker\Contracts\MakerCheckerRequestInterface;
+use Prismaticoder\MakerChecker\Exceptions\InvalidRequestModelSet;
 
 class MakerCheckerServiceProvider extends ServiceProvider
 {
     public function boot()
     {
-        AboutCommand::add('Maker Checker Laravel', ['Author' => 'Prismaticode', 'Version' => '1.0.0']); //flex
+        AboutCommand::add('Maker Checker Laravel', ['Author' => 'Prismaticoder', 'Version' => '1.0.0']); //flex
 
         if ($this->app->runningInConsole()) {
             $this->commands([ExpireOverduePendingRequests::class]);

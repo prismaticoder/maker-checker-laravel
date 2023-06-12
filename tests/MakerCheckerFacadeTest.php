@@ -1,24 +1,24 @@
 <?php
 
-namespace Prismaticode\MakerChecker\Tests;
+namespace Prismaticoder\MakerChecker\Tests;
 
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use InvalidArgumentException;
-use Prismaticode\MakerChecker\Enums\RequestStatuses;
-use Prismaticode\MakerChecker\Enums\RequestTypes;
-use Prismaticode\MakerChecker\Events\RequestApproved;
-use Prismaticode\MakerChecker\Events\RequestFailed;
-use Prismaticode\MakerChecker\Events\RequestInitiated;
-use Prismaticode\MakerChecker\Events\RequestRejected;
-use Prismaticode\MakerChecker\Exceptions\DuplicateRequestException;
-use Prismaticode\MakerChecker\Exceptions\RequestCannotBeChecked;
-use Prismaticode\MakerChecker\Exceptions\RequestCouldNotBeInitiated;
-use Prismaticode\MakerChecker\Facades\MakerChecker;
-use Prismaticode\MakerChecker\Tests\Executables\CreateArticleWithCacheEntry;
-use Prismaticode\MakerChecker\Tests\Models\Article;
-use Prismaticode\MakerChecker\Tests\Models\User;
+use Prismaticoder\MakerChecker\Enums\RequestStatuses;
+use Prismaticoder\MakerChecker\Enums\RequestTypes;
+use Prismaticoder\MakerChecker\Events\RequestApproved;
+use Prismaticoder\MakerChecker\Events\RequestFailed;
+use Prismaticoder\MakerChecker\Events\RequestInitiated;
+use Prismaticoder\MakerChecker\Events\RequestRejected;
+use Prismaticoder\MakerChecker\Exceptions\DuplicateRequestException;
+use Prismaticoder\MakerChecker\Exceptions\RequestCannotBeChecked;
+use Prismaticoder\MakerChecker\Exceptions\RequestCouldNotBeInitiated;
+use Prismaticoder\MakerChecker\Facades\MakerChecker;
+use Prismaticoder\MakerChecker\Tests\Executables\CreateArticleWithCacheEntry;
+use Prismaticoder\MakerChecker\Tests\Models\Article;
+use Prismaticoder\MakerChecker\Tests\Models\User;
 
 class MakerCheckerFacadeTest extends TestCase
 {

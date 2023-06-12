@@ -1,6 +1,6 @@
 <?php
 
-namespace Prismaticode\MakerChecker;
+namespace Prismaticoder\MakerChecker;
 
 use Carbon\Carbon;
 use Closure;
@@ -11,15 +11,15 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Laravel\SerializableClosure\SerializableClosure;
-use Prismaticode\MakerChecker\Contracts\ExecutableRequest;
-use Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface;
-use Prismaticode\MakerChecker\Enums\Hooks;
-use Prismaticode\MakerChecker\Enums\RequestStatuses;
-use Prismaticode\MakerChecker\Enums\RequestTypes;
-use Prismaticode\MakerChecker\Events\RequestInitiated;
-use Prismaticode\MakerChecker\Exceptions\DuplicateRequestException;
-use Prismaticode\MakerChecker\Exceptions\ModelCannotMakeRequests;
-use Prismaticode\MakerChecker\Exceptions\RequestCouldNotBeInitiated;
+use Prismaticoder\MakerChecker\Contracts\ExecutableRequest;
+use Prismaticoder\MakerChecker\Contracts\MakerCheckerRequestInterface;
+use Prismaticoder\MakerChecker\Enums\Hooks;
+use Prismaticoder\MakerChecker\Enums\RequestStatuses;
+use Prismaticoder\MakerChecker\Enums\RequestTypes;
+use Prismaticoder\MakerChecker\Events\RequestInitiated;
+use Prismaticoder\MakerChecker\Exceptions\DuplicateRequestException;
+use Prismaticoder\MakerChecker\Exceptions\ModelCannotMakeRequests;
+use Prismaticoder\MakerChecker\Exceptions\RequestCouldNotBeInitiated;
 
 class RequestBuilder
 {
@@ -45,7 +45,7 @@ class RequestBuilder
      *
      * @param string $description
      *
-     * @return \Prismaticode\MakerChecker\RequestBuilder
+     * @return \Prismaticoder\MakerChecker\RequestBuilder
      */
     public function description(string $description): self
     {
@@ -60,7 +60,7 @@ class RequestBuilder
      *
      * @param ...$uniqueIdentifiers
      *
-     * @return \Prismaticode\MakerChecker\RequestBuilder
+     * @return \Prismaticoder\MakerChecker\RequestBuilder
      */
     public function uniqueBy(...$uniqueIdentifiers): self //TODO: Note that it is only useful for MysQL, Postgres and SQLite 3.3.9+
     {
@@ -74,7 +74,7 @@ class RequestBuilder
      *
      * @param \Illuminate\Database\Eloquent\Model $maker
      *
-     * @return \Prismaticode\MakerChecker\RequestBuilder
+     * @return \Prismaticoder\MakerChecker\RequestBuilder
      */
     public function madeBy(Model $maker): self
     {
@@ -109,7 +109,7 @@ class RequestBuilder
      * @param string $model
      * @param array $payload
      *
-     * @return \Prismaticode\MakerChecker\RequestBuilder
+     * @return \Prismaticoder\MakerChecker\RequestBuilder
      */
     public function toCreate(string $model, array $payload = []): self
     {
@@ -132,7 +132,7 @@ class RequestBuilder
      * @param \Illuminate\Database\Eloquent\Model $modelToUpdate
      * @param array $requestedChanges
      *
-     * @return \Prismaticode\MakerChecker\RequestBuilder
+     * @return \Prismaticoder\MakerChecker\RequestBuilder
      */
     public function toUpdate(Model $modelToUpdate, array $requestedChanges): self
     {
@@ -150,7 +150,7 @@ class RequestBuilder
      *
      * @param \Illuminate\Database\Eloquent\Model $modelToDelete
      *
-     * @return \Prismaticode\MakerChecker\RequestBuilder
+     * @return \Prismaticoder\MakerChecker\RequestBuilder
      */
     public function toDelete(Model $modelToDelete): self
     {
@@ -165,10 +165,10 @@ class RequestBuilder
     /**
      * Commence initiation of an execute request.
      *
-     * @param string $executableAction the class to execute, it must be an instance of \Prismaticode\MakerChecker\Contracts\ExecutableRequest
+     * @param string $executableAction the class to execute, it must be an instance of \Prismaticoder\MakerChecker\Contracts\ExecutableRequest
      * @param array $payload
      *
-     * @return \Prismaticode\MakerChecker\RequestBuilder
+     * @return \Prismaticoder\MakerChecker\RequestBuilder
      */
     public function toExecute(string $executableAction, array $payload = []): self
     {
@@ -202,7 +202,7 @@ class RequestBuilder
      *
      * @param \Closure $callback
      *
-     * @return \Prismaticode\MakerChecker\RequestBuilder
+     * @return \Prismaticoder\MakerChecker\RequestBuilder
      */
     public function beforeApproval(Closure $callback): self
     {
@@ -216,7 +216,7 @@ class RequestBuilder
      *
      * @param \Closure $callback
      *
-     * @return \Prismaticode\MakerChecker\RequestBuilder
+     * @return \Prismaticoder\MakerChecker\RequestBuilder
      */
     public function afterApproval(Closure $callback): self
     {
@@ -230,7 +230,7 @@ class RequestBuilder
      *
      * @param \Closure $callback
      *
-     * @return \Prismaticode\MakerChecker\RequestBuilder
+     * @return \Prismaticoder\MakerChecker\RequestBuilder
      */
     public function beforeRejection(Closure $callback): self
     {
@@ -244,7 +244,7 @@ class RequestBuilder
      *
      * @param \Closure $callback
      *
-     * @return \Prismaticode\MakerChecker\RequestBuilder
+     * @return \Prismaticoder\MakerChecker\RequestBuilder
      */
     public function afterRejection(Closure $callback): self
     {
@@ -258,7 +258,7 @@ class RequestBuilder
      *
      * @param \Closure $callback
      *
-     * @return \Prismaticode\MakerChecker\RequestBuilder
+     * @return \Prismaticoder\MakerChecker\RequestBuilder
      */
     public function onFailure(Closure $callback): self
     {
@@ -294,7 +294,7 @@ class RequestBuilder
     /**
      * Persist the request into the data store.
      *
-     * @return \Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface
+     * @return \Prismaticoder\MakerChecker\Contracts\MakerCheckerRequestInterface
      */
     public function save(): MakerCheckerRequestInterface
     {
@@ -346,7 +346,7 @@ class RequestBuilder
     /**
      * Assert that there's no pending request with the same properties as this new request.
      *
-     * @param \Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface $request
+     * @param \Prismaticoder\MakerChecker\Contracts\MakerCheckerRequestInterface $request
      *
      * @return void
      */
