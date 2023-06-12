@@ -7,6 +7,7 @@ use Illuminate\Contracts\Config\Repository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Orchestra\Testbench\TestCase as TestbenchTestCase;
 use Prismaticode\MakerChecker\MakerCheckerServiceProvider;
+use Prismaticode\MakerChecker\Tests\Models\Article;
 use Prismaticode\MakerChecker\Tests\Models\User;
 
 abstract class TestCase extends TestbenchTestCase
@@ -93,5 +94,19 @@ abstract class TestCase extends TestbenchTestCase
         require_once __DIR__.'/../database/migrations/create_maker_checker_requests_table.php.stub';
 
         (new CreateMakerCheckerRequestsTable())->up(); //TODO: find another way to do this without going through this means
+    }
+
+    protected function createTestArticle(?string $title = null): Article
+    {
+        return Article::create($this->getArticleCreationPayload());
+    }
+
+    protected function getArticleCreationPayload(): array
+    {
+        return [
+            'title' => fake()->word(),
+            'description' => fake()->sentence(),
+            'created_by' => $this->makingUser->id,
+        ];
     }
 }
