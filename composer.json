@@ -1,6 +1,17 @@
 {
   "name": "prismaticoder/maker-checker-laravel",
   "description": "A package for simplifying the addition of a maker-checker feature to your Laravel application",
+  "keywords": [
+    "php",
+    "github",
+    "laravel",
+    "Open Source",
+    "approvals",
+    "maker-checker",
+    "laravel 8",
+    "laravel 9",
+    "laravel 10"
+  ],
   "license": "MIT",
   "autoload": {
     "psr-4": {
