@@ -13,7 +13,7 @@ class CreateMakerCheckerRequestsTable extends Migration
      */
     public function up()
     {
-        Schema::create('maker_checker_requests', function (Blueprint $table) {
+        Schema::create(config('makerchecker.table_name'), function (Blueprint $table) {
             $table->id();
             $table->uuid('code');
             $table->text('description');
