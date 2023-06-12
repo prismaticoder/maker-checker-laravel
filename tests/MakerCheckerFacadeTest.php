@@ -5,6 +5,7 @@ namespace Prismaticode\MakerChecker\Tests;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
+use InvalidArgumentException;
 use Prismaticode\MakerChecker\Enums\RequestStatuses;
 use Prismaticode\MakerChecker\Enums\RequestTypes;
 use Prismaticode\MakerChecker\Events\RequestApproved;
@@ -14,6 +15,7 @@ use Prismaticode\MakerChecker\Events\RequestRejected;
 use Prismaticode\MakerChecker\Exceptions\DuplicateRequestException;
 use Prismaticode\MakerChecker\Exceptions\RequestCannotBeChecked;
 use Prismaticode\MakerChecker\Facades\MakerChecker;
+use Prismaticode\MakerChecker\Tests\Executables\CreateArticleWithCacheEntry;
 use Prismaticode\MakerChecker\Tests\Models\Article;
 
 class MakerCheckerFacadeTest extends TestCase
@@ -412,5 +414,153 @@ class MakerCheckerFacadeTest extends TestCase
         ]);
 
         Event::assertDispatched(RequestRejected::class);
+    }
+
+    public function testItCanInitiateANewExecuteRequest()
+    {
+        Event::fake();
+
+        $articleCreationPayload = $this->getArticleCreationPayload();
+
+        $this->makingUser->requestToExecute(CreateArticleWithCacheEntry::class, $articleCreationPayload)->save();
+
+        $this->assertDatabaseHas('maker_checker_requests', [
+            'subject_type' => null,
+            'subject_id' => null,
+            'executable' => CreateArticleWithCacheEntry::class,
+            'type' => RequestTypes::EXECUTE,
+            'status' => RequestStatuses::PENDING,
+            'payload->title' => $articleCreationPayload['title'],
+            'payload->description' => $articleCreationPayload['description'],
+        ]);
+
+        Event::assertDispatched(RequestInitiated::class);
+    }
+
+    public function testItCanNotInitiateAnExecuteRequestIfExecutableDoesNotExtendTheExecutableRequestClass()
+    {
+        $articleCreationPayload = $this->getArticleCreationPayload();
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->makingUser->requestToExecute(Article::class, $articleCreationPayload)->save();
+    }
+
+    public function testItChecksForUniquenessInTheExecutableWhenInitiatingAnExecuteRequest()
+    {
+        $this->app['config']->set('makerchecker.ensure_requests_are_unique', true);
+
+        $articleCreationPayload = $this->getArticleCreationPayload();
+
+        $this->makingUser->requestToExecute(CreateArticleWithCacheEntry::class, $articleCreationPayload)->save();
+
+        $anotherRequestPayload = $articleCreationPayload;
+        $anotherRequestPayload['description'] = 'a_different_description';
+
+        $this->expectException(DuplicateRequestException::class);
+
+        $this->makingUser->requestToExecute(CreateArticleWithCacheEntry::class, $anotherRequestPayload)->save();
+    }
+
+    public function testItExecutesTheExecutableSuccessfullyWhenAnExecuteRequestIsApproved()
+    {
+        $payload = $this->getArticleCreationPayload();
+        $request = $this->makingUser->requestToExecute(CreateArticleWithCacheEntry::class, $payload)->save();
+
+        Event::fake();
+
+        $this->checkingUser->approve($request);
+
+        $this->assertDatabaseHas('maker_checker_requests', [
+            'code' => $request->code,
+            'status' => RequestStatuses::APPROVED,
+            'checker_type' => $this->checkingUser->getMorphClass(),
+            'checker_id' => $this->checkingUser->getKey(),
+        ]);
+
+        $this->assertDatabaseHas('articles', [
+            'title' => $payload['title'],
+            'description' => $payload['description'],
+        ]);
+
+        $this->assertEquals(Cache::get('executed_request_code'), $request->code);
+
+        Event::assertDispatched(RequestApproved::class);
+    }
+
+    public function testItDoesNotExecuteTheExecutableWhenAnExecuteRequestIsRejected()
+    {
+        $payload = $this->getArticleCreationPayload();
+        $request = $this->makingUser->requestToExecute(CreateArticleWithCacheEntry::class, $payload)->save();
+
+        Event::fake();
+
+        $this->checkingUser->reject($request);
+
+        $this->assertDatabaseHas('maker_checker_requests', [
+            'code' => $request->code,
+            'status' => RequestStatuses::REJECTED,
+            'checker_type' => $this->checkingUser->getMorphClass(),
+            'checker_id' => $this->checkingUser->getKey(),
+        ]);
+
+        $this->assertDatabaseMissing('articles', [
+            'title' => $payload['title'],
+            'description' => $payload['description'],
+        ]);
+
+        $this->assertNull(Cache::get('executed_request_code'));
+
+        Event::assertDispatched(RequestRejected::class);
+    }
+
+    public function testItExecutesTheProvidedCallbackWhenAnExecuteRequestIsApproved()
+    {
+        $payload = $this->getArticleCreationPayload();
+        $request = $this->makingUser->requestToExecute(CreateArticleWithCacheEntry::class, $payload)->save();
+
+        Event::fake();
+
+        $this->assertNull(Cache::get('approved_executed_request'));
+
+        $this->checkingUser->approve($request);
+
+        $this->assertEquals(Cache::get('approved_executed_request'), RequestStatuses::APPROVED.'|'.$request->code);
+
+        Event::assertDispatched(RequestApproved::class);
+    }
+
+    public function testItExecutesTheProvidedCallbackWhenAnExecuteRequestIsRejected()
+    {
+        $payload = $this->getArticleCreationPayload();
+        $request = $this->makingUser->requestToExecute(CreateArticleWithCacheEntry::class, $payload)->save();
+
+        Event::fake();
+
+        $this->assertNull(Cache::get('rejected_executed_request'));
+
+        $this->checkingUser->reject($request);
+
+        $this->assertEquals(Cache::get('rejected_executed_request'), RequestStatuses::REJECTED.'|'.$request->code);
+
+        Event::assertDispatched(RequestRejected::class);
+    }
+
+    public function testItExecutesTheProvidedCallbackWhenAnExecuteRequestFails()
+    {
+        $payload = $this->getArticleCreationPayload();
+        $payload['non_existent_field'] = 'non_existent_field';
+
+        $request = $this->makingUser->requestToExecute(CreateArticleWithCacheEntry::class, $payload)->save();
+
+        Event::fake();
+
+        $this->assertNull(Cache::get('failed_executed_request'));
+
+        $this->checkingUser->approve($request);
+
+        $this->assertEquals(Cache::get('failed_executed_request'), RequestStatuses::FAILED.'|'.$request->code);
+
+        Event::assertDispatched(RequestFailed::class);
     }
 }
