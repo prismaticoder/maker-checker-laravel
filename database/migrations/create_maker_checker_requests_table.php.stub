@@ -17,7 +17,7 @@ class CreateMakerCheckerRequestsTable extends Migration
             $table->id();
             $table->uuid('code');
             $table->text('description');
-            $table->string('request_type')->index();
+            $table->string('type')->index();
             $table->string('status')->index();
 
             $table->nullableMorphs('subject', 'subject');

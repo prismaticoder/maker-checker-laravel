@@ -117,7 +117,7 @@ class RequestBuilder
             throw new RequestCouldNotBeInitiated('Unrecognized model: '.$model);
         }
 
-        $this->request->request_type = RequestTypes::CREATE;
+        $this->request->type = RequestTypes::CREATE;
         $this->request->subject_type = $model;
         $this->request->payload = $payload;
 
@@ -136,7 +136,7 @@ class RequestBuilder
     {
         $this->assertRequestTypeIsNotSet();
 
-        $this->request->request_type = RequestTypes::UPDATE;
+        $this->request->type = RequestTypes::UPDATE;
         $this->request->subject()->associate($modelToUpdate);
         $this->request->payload = $requestedChanges;
 
@@ -154,7 +154,7 @@ class RequestBuilder
     {
         $this->assertRequestTypeIsNotSet();
 
-        $this->request->request_type = RequestTypes::DELETE;
+        $this->request->type = RequestTypes::DELETE;
         $this->request->subject()->associate($modelToDelete);
 
         return $this;
@@ -162,7 +162,7 @@ class RequestBuilder
 
     private function assertRequestTypeIsNotSet(): void
     {
-        if (isset($this->request->request_type)) {
+        if (isset($this->request->type)) {
             throw new RequestCouldNotBeInitiated('Cannot modify request type, a request type has already been provided.');
         }
     }
@@ -310,7 +310,7 @@ class RequestBuilder
         $requestModel = MakerCheckerServiceProvider::getRequestModelClass();
 
         $baseQuery = $requestModel::status(RequestStatuses::PENDING)
-            ->where('request_type', $request->request_type)
+            ->where('type', $request->type)
             ->where('subject_type', $request->subject_type)
             ->where('subject_id', $request->subject_id);
 
@@ -325,7 +325,7 @@ class RequestBuilder
         }
 
         if ($baseQuery->exists()) {
-            throw DuplicateRequestException::create($request->request_type);
+            throw DuplicateRequestException::create($request->type);
         }
     }
 }

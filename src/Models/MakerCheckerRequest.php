@@ -69,7 +69,7 @@ class MakerCheckerRequest extends Model implements MakerCheckerRequestInterface
 
     public function isOfType(string $type): bool
     {
-        return $this->request_type === $type;
+        return $this->type === $type;
     }
 
     public function scopeStatus(Builder $query, string $status): Builder

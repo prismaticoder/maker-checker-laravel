@@ -31,7 +31,7 @@ class MakerCheckerFacadeTest extends TestCase
         $this->assertDatabaseHas('maker_checker_requests', [
             'subject_type' => Article::class,
             'subject_id' => null,
-            'request_type' => RequestTypes::CREATE,
+            'type' => RequestTypes::CREATE,
             'status' => RequestStatuses::PENDING,
             'payload->title' => $articleCreationPayload['title'],
             'payload->description' => $articleCreationPayload['description'],
@@ -109,7 +109,7 @@ class MakerCheckerFacadeTest extends TestCase
         $this->assertDatabaseHas('maker_checker_requests', [
             'subject_type' => $article->getMorphClass(),
             'subject_id' => $article->getKey(),
-            'request_type' => RequestTypes::UPDATE,
+            'type' => RequestTypes::UPDATE,
             'status' => RequestStatuses::PENDING,
             'payload->title' => $newTitle,
         ]);
@@ -128,7 +128,7 @@ class MakerCheckerFacadeTest extends TestCase
         $this->assertDatabaseHas('maker_checker_requests', [
             'subject_type' => $article->getMorphClass(),
             'subject_id' => $article->getKey(),
-            'request_type' => RequestTypes::DELETE,
+            'type' => RequestTypes::DELETE,
             'status' => RequestStatuses::PENDING,
         ]);
 
