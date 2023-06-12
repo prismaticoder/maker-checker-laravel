@@ -11,7 +11,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Laravel\SerializableClosure\SerializableClosure;
-use Prismaticode\MakerChecker\Contracts\ExecuteRequestInterface;
+use Prismaticode\MakerChecker\Contracts\ExecutableRequest;
 use Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface;
 use Prismaticode\MakerChecker\Enums\Hooks;
 use Prismaticode\MakerChecker\Enums\RequestStatuses;
@@ -165,7 +165,7 @@ class RequestBuilder
     /**
      * Commence initiation of an execute request.
      *
-     * @param string $executableAction
+     * @param string $executableAction the class to execute, it must be an instance of \Prismaticode\MakerChecker\Contracts\ExecutableRequest
      * @param array $payload
      *
      * @return \Prismaticode\MakerChecker\RequestBuilder
@@ -176,13 +176,14 @@ class RequestBuilder
 
         $executable = $this->app->make($executableAction);
 
-        if (! $executable instanceof ExecuteRequestInterface) {
-            throw new InvalidArgumentException(sprintf('The executable action must implement the %s interface.', ExecuteRequestInterface::class));
+        if (! $executable instanceof ExecutableRequest) {
+            throw new InvalidArgumentException(sprintf('The executable action must implement the %s interface.', ExecutableRequest::class));
         }
 
         $this->request->type = RequestTypes::EXECUTE;
         $this->request->executable = $executableAction;
         $this->request->payload = $payload;
+        $this->uniqueIdentifiers = $this->uniqueIdentifiers ?: $executable->uniqueBy();
 
         $this->setHooksFromExecutable($executable);
 
@@ -275,7 +276,7 @@ class RequestBuilder
         $this->hooks[$hookName] = serialize(new SerializableClosure($callback));
     }
 
-    private function setHooksFromExecutable(ExecuteRequestInterface $executable): void
+    private function setHooksFromExecutable(ExecutableRequest $executable): void
     {
         $hookMethods = [
             Hooks::PRE_APPROVAL => 'beforeApproval',
