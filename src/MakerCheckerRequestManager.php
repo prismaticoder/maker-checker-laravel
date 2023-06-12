@@ -238,6 +238,8 @@ class MakerCheckerRequestManager
             $request->subject->update($request->payload);
         } elseif ($request->isOfType(RequestTypes::DELETE)) {
             $request->subject->delete();
+        } elseif ($request->isOfType(RequestTypes::EXECUTE)) {
+            $this->app->make($request->executable)->execute($request);
         } else {
             throw InvalidRequestTypePassed::create($request->type);
         }

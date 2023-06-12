@@ -7,7 +7,7 @@ abstract class RequestTypes
     public const CREATE = 'create';
     public const UPDATE = 'update';
     public const DELETE = 'delete';
-    public const ACTION = 'action';
+    public const EXECUTE = 'execute';
 
     public static function getAll(): array
     {
@@ -15,7 +15,7 @@ abstract class RequestTypes
             static::CREATE,
             static::UPDATE,
             static::DELETE,
-            static::ACTION,
+            static::EXECUTE,
         ];
     }
 }

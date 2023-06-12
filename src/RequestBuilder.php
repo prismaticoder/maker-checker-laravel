@@ -9,7 +9,9 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 use Laravel\SerializableClosure\SerializableClosure;
+use Prismaticode\MakerChecker\Contracts\ExecuteRequestInterface;
 use Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface;
 use Prismaticode\MakerChecker\Enums\Hooks;
 use Prismaticode\MakerChecker\Enums\RequestStatuses;
@@ -160,6 +162,33 @@ class RequestBuilder
         return $this;
     }
 
+    /**
+     * Commence initiation of an execute request.
+     *
+     * @param string $executableAction
+     * @param array $payload
+     *
+     * @return \Prismaticode\MakerChecker\RequestBuilder
+     */
+    public function toExecute(string $executableAction, array $payload = []): self
+    {
+        $this->assertRequestTypeIsNotSet();
+
+        $executable = $this->app->make($executableAction);
+
+        if (! $executable instanceof ExecuteRequestInterface) {
+            throw new InvalidArgumentException(sprintf('The executable action must implement the %s interface.', ExecuteRequestInterface::class));
+        }
+
+        $this->request->type = RequestTypes::EXECUTE;
+        $this->request->executable = $executableAction;
+        $this->request->payload = $payload;
+
+        $this->setHooksFromExecutable($executable);
+
+        return $this;
+    }
+
     private function assertRequestTypeIsNotSet(): void
     {
         if (isset($this->request->type)) {
@@ -244,6 +273,21 @@ class RequestBuilder
         }
 
         $this->hooks[$hookName] = serialize(new SerializableClosure($callback));
+    }
+
+    private function setHooksFromExecutable(ExecuteRequestInterface $executable): void
+    {
+        $hookMethods = [
+            Hooks::PRE_APPROVAL => 'beforeApproval',
+            Hooks::POST_APPROVAL => 'afterApproval',
+            Hooks::PRE_REJECTION => 'beforeRejection',
+            Hooks::POST_REJECTION => 'afterRejection',
+            Hooks::ON_FAILURE => 'onFailure',
+        ];
+
+        foreach ($hookMethods as $hookName => $method) {
+            $this->setHook($hookName, Closure::fromCallable([$executable, $method]));
+        }
     }
 
     /**
