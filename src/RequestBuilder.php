@@ -18,7 +18,6 @@ use Prismaticode\MakerChecker\Events\RequestInitiated;
 use Prismaticode\MakerChecker\Exceptions\DuplicateRequestException;
 use Prismaticode\MakerChecker\Exceptions\ModelCannotMakeRequests;
 use Prismaticode\MakerChecker\Exceptions\RequestCouldNotBeInitiated;
-use Prismaticode\MakerChecker\Models\MakerCheckerRequest;
 
 class RequestBuilder
 {
@@ -28,7 +27,7 @@ class RequestBuilder
 
     private Application $app;
 
-    private MakerCheckerRequest $request; //TODO: update this to be typehinted to the interface instead.
+    private MakerCheckerRequestInterface $request; //TODO: update this to be typehinted to the interface instead.
 
     private array $configData;
 
@@ -271,20 +270,20 @@ class RequestBuilder
             $request->save();
 
             $this->app['events']->dispatch(new RequestInitiated($request));
-
-            return $request;
         } catch (\Throwable $e) {
             throw new RequestCouldNotBeInitiated("Error initiating request: {$e->getMessage()}", 0, $e);
         } finally {
             $this->request = $this->createNewPendingRequest(); //reset it back to how it was
             $this->hooks = [];
             $this->uniqueIdentifiers = [];
+
+            return $request;
         }
     }
 
-    private function createNewPendingRequest(): MakerCheckerRequest
+    private function createNewPendingRequest(): MakerCheckerRequestInterface
     {
-        $request = new MakerCheckerRequest(); //TODO: Update this to use the model class configured by the user instead
+        $request = MakerCheckerServiceProvider::resolveRequestModel();
 
         $request->code = (string) Str::uuid();
         $request->status = RequestStatuses::PENDING;
@@ -302,13 +301,15 @@ class RequestBuilder
     /**
      * Assert that there's no pending request with the same properties as this new request.
      *
-     * @param \Prismaticode\MakerChecker\Models\MakerCheckerRequest $request
+     * @param \Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface $request
      *
      * @return void
      */
-    protected function assertRequestIsUnique(MakerCheckerRequest $request): void
+    protected function assertRequestIsUnique(MakerCheckerRequestInterface $request): void
     {
-        $baseQuery = MakerCheckerRequest::status(RequestStatuses::PENDING)
+        $requestModel = MakerCheckerServiceProvider::getRequestModelClass();
+
+        $baseQuery = $requestModel::status(RequestStatuses::PENDING)
             ->where('request_type', $request->request_type)
             ->where('subject_type', $request->subject_type)
             ->where('subject_id', $request->subject_id);

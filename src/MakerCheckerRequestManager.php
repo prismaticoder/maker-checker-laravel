@@ -4,7 +4,6 @@ namespace Prismaticode\MakerChecker;
 
 use Carbon\Carbon;
 use Closure;
-use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface;
@@ -101,10 +100,6 @@ class MakerCheckerRequestManager
      */
     public function approve(MakerCheckerRequestInterface $request, Model $approver, ?string $remarks = null): MakerCheckerRequestInterface
     {
-        if (! $request instanceof Model) {
-            throw new Exception('Request class must extend the base Eloquent model class.');
-        }
-
         $this->assertRequestCanBeChecked($request, $approver);
 
         $request->update([
@@ -154,10 +149,6 @@ class MakerCheckerRequestManager
      */
     public function reject(MakerCheckerRequestInterface $request, Model $rejector, ?string $remarks = null): MakerCheckerRequestInterface
     {
-        if (! $request instanceof Model) {
-            throw new Exception('Request class must extend the base Eloquent model class.');
-        }
-
         $this->assertRequestCanBeChecked($request, $rejector);
 
         $request->update([
@@ -196,6 +187,12 @@ class MakerCheckerRequestManager
 
     private function assertRequestCanBeChecked(MakerCheckerRequestInterface $request, Model $checker): void
     {
+        $requestModelClass = MakerCheckerServiceProvider::getRequestModelClass();
+
+        if (! is_a($request, $requestModelClass)) {
+            throw RequestCannotBeChecked::create("The request model passed must be an instance of {$requestModelClass}");
+        }
+
         $this->assertModelCanCheckRequests($checker);
 
         if (! $request->isOfStatus(RequestStatuses::PENDING)) {

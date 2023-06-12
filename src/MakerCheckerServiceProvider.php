@@ -6,6 +6,8 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
 use Prismaticode\MakerChecker\Console\Commands\ExpireOverduePendingRequests;
+use Prismaticode\MakerChecker\Contracts\MakerCheckerRequestInterface;
+use Prismaticode\MakerChecker\Exceptions\InvalidRequestModelSet;
 
 class MakerCheckerServiceProvider extends ServiceProvider
 {
@@ -37,5 +39,23 @@ class MakerCheckerServiceProvider extends ServiceProvider
         $currentTimestamp = date('Y_m_d_His');
 
         return database_path('migrations')."/{$currentTimestamp}_create_maker_checker_requests_table.php";
+    }
+
+    public static function resolveRequestModel(): MakerCheckerRequestInterface
+    {
+        $requestModel = self::getRequestModelClass();
+
+        return new $requestModel();
+    }
+
+    public static function getRequestModelClass(): string
+    {
+        $requestModel = config('makerchecker.request_model', MakerCheckerRequest::class);
+
+        if (! is_string($requestModel) || ! is_a($requestModel, MakerCheckerRequestInterface::class) || ! is_a($requestModel, Model::class)) {
+            throw InvalidRequestModelSet::create();
+        }
+
+        return $requestModel;
     }
 }
