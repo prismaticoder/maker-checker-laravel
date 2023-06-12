@@ -14,9 +14,11 @@ use Prismaticode\MakerChecker\Events\RequestInitiated;
 use Prismaticode\MakerChecker\Events\RequestRejected;
 use Prismaticode\MakerChecker\Exceptions\DuplicateRequestException;
 use Prismaticode\MakerChecker\Exceptions\RequestCannotBeChecked;
+use Prismaticode\MakerChecker\Exceptions\RequestCouldNotBeInitiated;
 use Prismaticode\MakerChecker\Facades\MakerChecker;
 use Prismaticode\MakerChecker\Tests\Executables\CreateArticleWithCacheEntry;
 use Prismaticode\MakerChecker\Tests\Models\Article;
+use Prismaticode\MakerChecker\Tests\Models\User;
 
 class MakerCheckerFacadeTest extends TestCase
 {
@@ -40,6 +42,19 @@ class MakerCheckerFacadeTest extends TestCase
         ]);
 
         Event::assertDispatched(RequestInitiated::class);
+    }
+
+    public function testItThrowsAnErrorWhenMultipleRequestTypesAreChainedTogether()
+    {
+        $articleCreationPayload = $this->getArticleCreationPayload();
+
+        $this->expectException(RequestCouldNotBeInitiated::class);
+
+        MakerChecker::request()
+            ->toCreate(Article::class, $articleCreationPayload)
+            ->toDelete(User::first())
+            ->madeBy($this->makingUser)
+            ->save();
     }
 
     public function testItChecksForUniquenessBySpecifiedFieldsWhenTryingToMakeRequests()
