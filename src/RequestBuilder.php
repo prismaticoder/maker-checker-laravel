@@ -356,6 +356,7 @@ class RequestBuilder
 
         $baseQuery = $requestModel::status(RequestStatuses::PENDING)
             ->where('type', $request->type)
+            ->where('executable', $request->executable)
             ->where('subject_type', $request->subject_type)
             ->where('subject_id', $request->subject_id);
 

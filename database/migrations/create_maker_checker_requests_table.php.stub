@@ -21,7 +21,7 @@ class CreateMakerCheckerRequestsTable extends Migration
             $table->string('status')->index();
 
             $table->nullableMorphs('subject', 'subject');
-            $table->string('executable')->nullable();
+            $table->string('executable')->nullable()->index();
 
             $table->morphs('maker', 'maker');
             $table->timestamp('made_at');
