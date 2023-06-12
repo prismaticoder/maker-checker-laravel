@@ -22,4 +22,9 @@ trait MakesRequests
     {
         return MakerChecker::request()->toDelete($modelToDelete)->madeBy($this);
     }
+
+    public function requestToExecute(string $executable, array $payload = []): RequestBuilder
+    {
+        return MakerChecker::request()->toExecute($executable, $payload)->madeBy($this);
+    }
 }
