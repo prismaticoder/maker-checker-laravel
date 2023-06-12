@@ -3,6 +3,7 @@
 namespace Prismaticode\MakerChecker;
 
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
 use Prismaticode\MakerChecker\Console\Commands\ExpireOverduePendingRequests;
@@ -52,7 +53,7 @@ class MakerCheckerServiceProvider extends ServiceProvider
     {
         $requestModel = config('makerchecker.request_model', MakerCheckerRequest::class);
 
-        if (! is_string($requestModel) || ! is_a($requestModel, MakerCheckerRequestInterface::class) || ! is_a($requestModel, Model::class)) {
+        if (! is_string($requestModel) || ! is_subclass_of($requestModel, Model::class) || ! in_array(MakerCheckerRequestInterface::class, class_implements($requestModel))) {
             throw InvalidRequestModelSet::create();
         }
 
