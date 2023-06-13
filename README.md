@@ -9,6 +9,19 @@ The `prismaticoder/maker-checker-laravel` package is a comprehensive Laravel pac
 - **Event Driven**: The package triggers events throughout the approval workflow, allowing you to hook into these events and perform custom actions or integrations.
 - **Logging and Auditing**: Track and log the approval process, including who made the request, who approved it, and when. Gain insights into the history of actions and approvals.
 
+## Requirements
+
+- PHP 8 or higher
+- Laravel 8 or higher
+
+The Maker-Checker Laravel package requires PHP version 8 or higher and Laravel version 8 or higher to function properly. Before installing the package, make sure your development environment meets these requirements.
+
+You can check your PHP version by running the following command in your terminal:
+
+```shell
+php -v
+```
+
 ## Installation
 
 You can install the `prismaticoder/maker-checker-laravel` package via Composer. Run the following command in your terminal:
@@ -22,7 +35,7 @@ composer require prismaticoder/maker-checker-laravel
 After installing the package, you need to publish the configuration and migration files to customize the maker-checker settings. Run the following command:
 
 ```bash
-php artisan vendor:publish --provider="prismaticoder\MakerChecker\MakerCheckerServiceProvider" --tag="config"
+php artisan vendor:publish --provider="Prismaticoder\MakerChecker\MakerCheckerServiceProvider" --tag="config"
 ```
 
 This will create a `config/makerchecker.php` file in your application's config as well as a `create_maker_checker_requests_table` migration file in your `database/migrations` folder
