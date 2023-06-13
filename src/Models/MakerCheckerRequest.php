@@ -64,12 +64,12 @@ class MakerCheckerRequest extends Model implements MakerCheckerRequestInterface
 
     public function isOfStatus(string $status): bool
     {
-        return $this->status === $status;
+        return strtolower($this->status) === strtolower($status);
     }
 
     public function isOfType(string $type): bool
     {
-        return $this->type === $type;
+        return strtolower($this->type) === strtolower($type);
     }
 
     public function scopeStatus(Builder $query, string $status): Builder
