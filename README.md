@@ -103,6 +103,15 @@ auth()->user()
     ->save()
 ```
 
+You can also give the request a custom description with the `description()` method.
+
+```php
+auth()->user()
+    ->requestToCreate(User::class, ['name' => 'Tobi David', 'email' => 'johndoe@example.com'])
+    ->description('Invitation of Tobi David as a collaborator.')
+    ->save();
+```
+
 #### The Executable Request Type
 
 Asides the generic actions of creating, updating and deleting models, it is also possible that you would want to perform miscellaneous requests that do not directly fall into any of this categories e.g making an http call to an external system, combining different actions etc.
@@ -138,6 +147,28 @@ auth()->user()
 ```
 
 When this request is approved, a call will be made to the `execute()` method of the executable class to facilitate the action specified.
+
+### Customizing the Request with `tap()`
+
+The request builder provides a `tap()` method that allows you to customize the underlying request object by applying actions or modifications. The `tap()` method accepts a closure function as its argument, where you can perform various operations on the request.
+
+Here's an example:
+
+```php
+auth()->user()
+    ->requestToCreate(User::class, ['name' => 'Tobi David', 'email' => 'johndoe@example.com'])
+    ->tap(function ($request) {
+        // Perform customizations on the request
+        $request->custom_field = $customValue
+    })
+    ->save();
+```
+
+In the above example, the `tap()` method is used to customize the request by setting the value of a custom field in the table storing the requests.
+
+Note that the `tap()` method is optional and can be used whenever you need to perform additional actions or modifications on the request before it is initiated.
+
+By leveraging the tap() method, you have the flexibility to customize the request object according to your specific requirements, ensuring that it captures all the necessary details for the maker-checker process.
 
 ### Approving/Rejecting a Request
 
