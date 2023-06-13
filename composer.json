@@ -1,12 +1,13 @@
 {
   "name": "prismaticoder/maker-checker-laravel",
-  "description": "A package for simplifying the addition of a maker-checker feature to your Laravel application",
+  "description": "A package for simplifying the integration of a maker-checker approval process to your Laravel application.",
   "keywords": [
     "php",
     "github",
     "laravel",
     "Open Source",
     "approvals",
+    "admin",
     "maker-checker",
     "laravel 8",
     "laravel 9",
@@ -26,7 +27,7 @@
   "authors": [
     {
       "name": "Jesutomiwa Salam",
-      "email": "pjjsalam1999@gmail.com"
+      "email": "jesutomiwathefirst@gmail.com"
     }
   ],
   "minimum-stability": "dev",
