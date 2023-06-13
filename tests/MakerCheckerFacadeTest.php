@@ -16,6 +16,7 @@ use Prismaticoder\MakerChecker\Exceptions\DuplicateRequestException;
 use Prismaticoder\MakerChecker\Exceptions\RequestCannotBeChecked;
 use Prismaticoder\MakerChecker\Exceptions\RequestCouldNotBeInitiated;
 use Prismaticoder\MakerChecker\Facades\MakerChecker;
+use Prismaticoder\MakerChecker\Models\MakerCheckerRequest;
 use Prismaticoder\MakerChecker\Tests\Executables\CreateArticleWithCacheEntry;
 use Prismaticoder\MakerChecker\Tests\Models\Article;
 use Prismaticoder\MakerChecker\Tests\Models\User;
@@ -429,6 +430,21 @@ class MakerCheckerFacadeTest extends TestCase
         ]);
 
         Event::assertDispatched(RequestRejected::class);
+    }
+
+    public function testItPerformsActionsSpecifiedInTheTapMethod()
+    {
+        $customDescription = fake()->sentence();
+
+        $request = $this->makingUser
+            ->requestToCreate(Article::class, $this->getArticleCreationPayload())
+            ->tap(fn (MakerCheckerRequest $request) => $request->description = $customDescription)
+            ->save();
+
+        $this->assertDatabaseHas('maker_checker_requests', [
+            'code' => $request->code,
+            'description' => $customDescription,
+        ]);
     }
 
     public function testItCanInitiateANewExecuteRequest()

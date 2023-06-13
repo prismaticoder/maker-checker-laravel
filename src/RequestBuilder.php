@@ -29,7 +29,7 @@ class RequestBuilder
 
     private Application $app;
 
-    private MakerCheckerRequestInterface $request; //TODO: update this to be typehinted to the interface instead.
+    private MakerCheckerRequestInterface $request;
 
     private array $configData;
 
@@ -190,6 +190,20 @@ class RequestBuilder
         return $this;
     }
 
+    /**
+     * Perform custom actions on the underlying request.
+     *
+     * @param \Closure $callback
+     *
+     * @return self
+     */
+    public function tap(Closure $callback): self
+    {
+        $callback($this->request);
+
+        return $this;
+    }
+
     private function assertRequestTypeIsNotSet(): void
     {
         if (isset($this->request->type)) {
@@ -304,6 +318,7 @@ class RequestBuilder
             $request->description = "New {$request->type} request"; //TODO: Change this later to reflect something more dynamic.
         }
 
+        $request->status = RequestStatuses::PENDING;
         $request->metadata = $this->generateMetadata();
         $request->made_at = Carbon::now();
 
@@ -331,7 +346,6 @@ class RequestBuilder
         $request = MakerCheckerServiceProvider::resolveRequestModel();
 
         $request->code = (string) Str::uuid();
-        $request->status = RequestStatuses::PENDING;
 
         return $request;
     }
