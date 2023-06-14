@@ -34,8 +34,16 @@ composer require prismaticoder/maker-checker-laravel
 
 After installing the package, you need to publish the configuration and migration files to customize the maker-checker settings. Run the following command:
 
+Migration:
+
 ```bash
-php artisan vendor:publish --provider="Prismaticoder\MakerChecker\MakerCheckerServiceProvider" --tag="config"
+php artisan vendor:publish --provider="Prismaticoder\MakerChecker\MakerCheckerServiceProvider" --tag="makerchecker-migration"
+```
+
+Config:
+
+```bash
+php artisan vendor:publish --provider="Prismaticoder\MakerChecker\MakerCheckerServiceProvider" --tag="makerchecker-config"
 ```
 
 This will create a `config/makerchecker.php` file in your application's config as well as a `create_maker_checker_requests_table` migration file in your `database/migrations` folder
