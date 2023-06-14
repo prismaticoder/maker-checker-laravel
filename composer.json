@@ -40,5 +40,12 @@
   },
   "require-dev": {
     "orchestra/testbench": "7.x-dev"
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Prismaticoder\\MakerChecker\\MakerCheckerServiceProvider"
+      ]
+    }
   }
 }
