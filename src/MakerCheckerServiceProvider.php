@@ -28,6 +28,11 @@ class MakerCheckerServiceProvider extends ServiceProvider
 
     public function register()
     {
+        $this->mergeConfigFrom(
+            __DIR__.'/../config/makerchecker.php',
+            'makerchecker'
+        );
+
         $this->app->bind(MakerCheckerRequestManager::class, fn (Application $app) => new MakerCheckerRequestManager($app));
         $this->app->bind(RequestBuilder::class, fn (Application $app) => new RequestBuilder($app));
     }
