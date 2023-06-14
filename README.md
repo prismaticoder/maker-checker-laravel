@@ -256,7 +256,6 @@ use Primaticode\MakerChecker\Events\RequestApproved;
 use Primaticode\MakerChecker\Events\RequestFailed;
 use Primaticode\MakerChecker\Events\RequestInitiated;
 use Primaticode\MakerChecker\Events\RequestRejected;
-use Primaticode\MakerChecker\Listeners\SendEmailNotification;
 
 Event::listen(RequestApproved::class, function (RequestApproved $event) {
     $request = $event->request; // Get the request instance
