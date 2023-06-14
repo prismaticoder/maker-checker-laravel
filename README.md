@@ -52,6 +52,20 @@ use Prismaticoder\MakerChecker\Models\MakerCheckerRequest
 MakerCheckerRequest::all(); // Get all requests
 MakerCheckerRequest::status('pending')->get(); // Get all pending requests
 
+$request = MakerCheckerRequest::first();
+
+$request->status; // the status of the request: pending | approved | rejected | failed | expired
+$request->type; // the request type: create | update | delete | execute
+$request->description; // the description provided for the request
+$request->payload; // the payload passed when the request was initiated
+$request->maker; // the request maker
+$request->checker; // the request checker
+$request->subject; // the subject on which the request is to be executed on (null for execute requests)
+$request->made_at; // timestamp of when the request was made.
+$request->checked_at; // timestamp of when the request was checked.
+$request->remarks; // remarks added by the checker when checking.
+$request->exception; // exception encountered in the event that the request failed during approval.
+
 ```
 
 ### Initiating a new request
